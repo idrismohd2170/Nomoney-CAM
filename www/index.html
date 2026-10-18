@@ -34,6 +34,9 @@
       .then(s => { v.srcObject = s; })
       .catch(e => { msg.hidden = false; msg.textContent = 'Camera unavailable: ' + e.name; });
 
+    const looks = Object.keys(PRESETS);
+    let look = 0;
+
     // shortcut: keeps the shot in memory only, F9 (save/share) will persist it
     const shoot = () => {
       if (!v.videoWidth) return;
@@ -41,11 +44,16 @@
       c.width = v.videoWidth; c.height = v.videoHeight;
       const ctx = c.getContext('2d');
       ctx.drawImage(v, 0, 0);
-      ctx.putImageData(develop(ctx.getImageData(0, 0, c.width, c.height), PRESETS.sunny, Date.now()), 0, 0);
+      ctx.putImageData(develop(ctx.getImageData(0, 0, c.width, c.height), PRESETS[looks[look]], Date.now()), 0, 0);
       last.src = c.toDataURL('image/jpeg', 0.92);
     };
 
     const dock = new Container({ type: 'pill', borderRadius: 48, tintOpacity: 0.25 });
+    const pick = new Button({ text: 'Sunny', size: 20, type: 'pill', onClick: () => {
+      look = (look + 1) % looks.length;
+      pick.textElement.textContent = looks[look][0].toUpperCase() + looks[look].slice(1);
+    } });
+    dock.addChild(pick);
     dock.addChild(new Button({ text: '\u25CF', size: 28, type: 'circle', onClick: shoot }));
     bar.appendChild(dock.element);
   </script>

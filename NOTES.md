@@ -21,15 +21,19 @@ Rewritten after every step. Read this first.
 - Step 5 (F1): live rear-camera preview (`getUserMedia`), shutter draws the frame to a canvas and shows it as a thumbnail. `CAMERA` permission added to the manifest. Not yet run on a device.
 - Step 6: liquid-glass shell. Library files vendored into `www/vendor/` (container.js, button.js, glass.css, plus html2canvas 1.4.1, both MIT, licenses alongside). Shutter is now a glass circle button inside a glass pill dock on a gradient bottom bar. Checked in headless Chromium with a fake camera: glass renders, click captures a frame.
 - Step 7a (F2): film look. `www/film.js` `develop()` applies S-curve contrast, lifted blacks, colour tint, saturation, vignette and grain to every capture (hardcoded to the `sunny` preset for now). Pure function, so `node test/film.test.js` checks it with no browser; CI runs that test before the APK build. Checked a real capture in headless Chromium: grain, vignette and fade visible.
+- Step 7b (F3): look presets. A glass pill in the dock cycles Sunny, Mono, Dusk (our own names and numbers from `film.js`); the chosen look is applied on the next capture. Checked in headless Chromium: label cycles and wraps, a Mono shot has identical R, G, B.
 
 ## Next steps
 1. Install the APK on a phone and confirm the permission prompt, preview and glass button work. Fix first if not.
-2. F3 presets: three are already defined in `film.js` (sunny, mono, dusk), add a glass button to pick one.
-3. F9 save/share the captured photo. Needs a Capacitor plugin (Filesystem and/or Share): ask before adding, WebView cannot download or share files by itself.
+2. F9 save/share the captured photo. This is the last must-have. It needs a Capacitor plugin (Filesystem and/or Share): ask before adding, WebView cannot download or share files by itself.
+3. Show the selected look on the viewfinder (live preview is still unprocessed, so what you see is not what you get).
 4. Should-haves: gallery (F8), dust/frames (F4/F5), double exposure (F6), import (F7).
 5. Could-haves: front/rear toggle (F11), development wait (F10).
 
 ## Could be better
+- The live preview does not show the selected look, only the saved shot does. A CSS filter approximation on the `<video>` could preview it cheaply.
+- Preset picker is a single cycle button, so you cannot see all looks at once. Fine for three, awkward for many.
+- The preset pill is sized from "Sunny", so longer future names would overflow it.
 - No sharpening pass in the film look (needs a neighbour kernel). Add it if shots look soft on a device.
 - Preset numbers are guesses tuned only against a test pattern. Tune by eye on real photos.
 - `develop()` runs on the main thread over every pixel. Fine in testing, unmeasured on a phone at full camera resolution. Downscale or use a worker if capture feels slow.
