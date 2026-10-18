@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Nomoney CAM</string>
+    <string name="title_activity_main">Nomoney CAM</string>
+    <string name="package_name">com.nomoney.cam</string>
+    <string name="custom_url_scheme">com.nomoney.cam</string>
+</resources>

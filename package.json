@@ -1,0 +1,23 @@
+{
+  "name": "nomoney-cam",
+  "version": "1.0.0",
+  "description": "Clean-room analog film camera app",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/idrismohd2170/nomoney-cam.git"
+  },
+  "bugs": {
+    "url": "https://github.com/idrismohd2170/nomoney-cam/issues"
+  },
+  "homepage": "https://github.com/idrismohd2170/nomoney-cam#readme",
+  "private": true,
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3"
+  }
+}
