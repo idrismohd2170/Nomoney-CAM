@@ -6,10 +6,37 @@
   <title>Nomoney CAM</title>
   <style>
     html, body { margin: 0; height: 100%; background: #111; color: #eee; font: 16px system-ui, sans-serif; }
-    body { display: grid; place-items: center; }
+    body { display: flex; flex-direction: column; }
+    video { flex: 1; min-height: 0; width: 100%; object-fit: cover; }
+    #bar { display: flex; align-items: center; justify-content: center; gap: 24px; padding: 16px; }
+    #shutter { width: 64px; height: 64px; border-radius: 50%; border: 4px solid #eee; background: #fff; }
+    #last { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; background: #222; }
+    #msg { text-align: center; padding: 8px; }
   </style>
 </head>
 <body>
-  <main>Nomoney CAM</main>
+  <video id="v" autoplay playsinline muted></video>
+  <div id="msg" hidden></div>
+  <div id="bar">
+    <img id="last" alt="">
+    <button id="shutter" aria-label="Take photo"></button>
+  </div>
+  <script>
+    const v = document.getElementById('v'), msg = document.getElementById('msg');
+    const last = document.getElementById('last'), shutter = document.getElementById('shutter');
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+      .then(s => { v.srcObject = s; })
+      .catch(e => { msg.hidden = false; msg.textContent = 'Camera unavailable: ' + e.name; shutter.disabled = true; });
+
+    // shortcut: keeps the shot in memory only, F9 (save/share) will persist it
+    shutter.onclick = () => {
+      if (!v.videoWidth) return;
+      const c = document.createElement('canvas');
+      c.width = v.videoWidth; c.height = v.videoHeight;
+      c.getContext('2d').drawImage(v, 0, 0);
+      last.src = c.toDataURL('image/jpeg', 0.92);
+    };
+  </script>
 </body>
 </html>
