@@ -22,15 +22,21 @@ Rewritten after every step. Read this first.
 - Step 6: liquid-glass shell. Library files vendored into `www/vendor/` (container.js, button.js, glass.css, plus html2canvas 1.4.1, both MIT, licenses alongside). Shutter is now a glass circle button inside a glass pill dock on a gradient bottom bar. Checked in headless Chromium with a fake camera: glass renders, click captures a frame.
 - Step 7a (F2): film look. `www/film.js` `develop()` applies S-curve contrast, lifted blacks, colour tint, saturation, vignette and grain to every capture (hardcoded to the `sunny` preset for now). Pure function, so `node test/film.test.js` checks it with no browser; CI runs that test before the APK build. Checked a real capture in headless Chromium: grain, vignette and fade visible.
 - Step 7b (F3): look presets. A glass pill in the dock cycles Sunny, Mono, Dusk (our own names and numbers from `film.js`); the chosen look is applied on the next capture. Checked in headless Chromium: label cycles and wraps, a Mono shot has identical R, G, B.
+- Step 7c (F9): share/save. Added `@capacitor/filesystem` and `@capacitor/share` (approved by you). A glass Share pill writes the latest shot to the app cache and opens the Android share sheet, which also offers saving to the device. No storage permission needed. Checked with a mocked Capacitor bridge in headless Chromium: right calls, real JPEG data, plus a browser-only fallback message. Dock fits at 320, 360 and 412 px wide.
+- All four must-haves (F1, F2, F3, F9) are now built. None has run on a real phone yet.
 
 ## Next steps
 1. Install the APK on a phone and confirm the permission prompt, preview and glass button work. Fix first if not.
-2. F9 save/share the captured photo. This is the last must-have. It needs a Capacitor plugin (Filesystem and/or Share): ask before adding, WebView cannot download or share files by itself.
+2. Confirm Share works on the phone: the app calls `Capacitor.Plugins.Filesystem/Share` directly because there is no bundler. That is the documented no-bundler route but only a mock has tested it.
 3. Show the selected look on the viewfinder (live preview is still unprocessed, so what you see is not what you get).
 4. Should-haves: gallery (F8), dust/frames (F4/F5), double exposure (F6), import (F7).
 5. Could-haves: front/rear toggle (F11), development wait (F10).
 
 ## Could be better
+- Share is the only save path: the user must pick "save" in the share sheet. A direct save to Gallery/Pictures needs MediaStore or a storage permission. Add if people expect one tap.
+- Only the latest shot is kept, in memory. Restarting loses it. The gallery (F8) is the fix.
+- Cached share files in the app cache are never cleaned up by us. Android clears the cache under pressure, but a cleanup could be added.
+- Share and the plugin calls are unverified on a device. Errors show in the on-screen message line.
 - The live preview does not show the selected look, only the saved shot does. A CSS filter approximation on the `<video>` could preview it cheaply.
 - Preset picker is a single cycle button, so you cannot see all looks at once. Fine for three, awkward for many.
 - The preset pill is sized from "Sunny", so longer future names would overflow it.
@@ -43,7 +49,6 @@ Rewritten after every step. Read this first.
 - Vendored libraries are copies (liquid-glass-js has no npm package). Note the source commit when updating them.
 - WebGL cost on low-end phones is unmeasured.
 - The APK has never been run on a device. Camera preview and permission flow are unverified.
-- Capture is in memory only: the thumbnail is lost on restart until F9 lands.
 - Captures use the preview's resolution, not the sensor's full resolution. Revisit with ImageCapture or a native plugin if quality matters.
 - No front/rear toggle, so a device with no rear camera falls back to whatever the browser picks.
 - CI has no Gradle cache and the actions are pinned to major tags only. Add a cache if builds get slow.
@@ -59,6 +64,7 @@ Rewritten after every step. Read this first.
 - Capacitor 8 needs Java 21 and Node 22. The original task said JDK 17; that fails with this Capacitor version, so CI uses 21.
 - liquid-glass-js and html2canvas are vendored into `www/vendor/` (no CDN) so the APK works offline.
 - Camera uses the WebView's `getUserMedia` with the manifest `CAMERA` permission, no camera plugin: fewer dependencies.
+- Save/share uses the share sheet via two Capacitor plugins (Filesystem for the cache file, Share for the sheet). WebView cannot download or share files itself. Approved by the user.
 - Film look is plain canvas maths in a pure function, no image library. Looks are our own named presets.
 - No shop, payments or membership.
 
