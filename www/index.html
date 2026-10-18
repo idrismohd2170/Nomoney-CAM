@@ -4,12 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Nomoney CAM</title>
+  <link rel="stylesheet" href="vendor/glass.css">
   <style>
     html, body { margin: 0; height: 100%; background: #111; color: #eee; font: 16px system-ui, sans-serif; }
     body { display: flex; flex-direction: column; }
     video { flex: 1; min-height: 0; width: 100%; object-fit: cover; }
-    #bar { display: flex; align-items: center; justify-content: center; gap: 24px; padding: 16px; }
-    #shutter { width: 64px; height: 64px; border-radius: 50%; border: 4px solid #eee; background: #fff; }
+    /* glass samples a snapshot of the page, so it lives on this static bar, never over the live video */
+    #bar { display: flex; align-items: center; justify-content: center; gap: 24px; padding: 16px 16px 24px;
+           background: linear-gradient(135deg, #1d2b4f, #4a2b5c 60%, #7a3b4e); }
     #last { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; background: #222; }
     #msg { text-align: center; padding: 8px; }
   </style>
@@ -19,24 +21,30 @@
   <div id="msg" hidden></div>
   <div id="bar">
     <img id="last" alt="">
-    <button id="shutter" aria-label="Take photo"></button>
   </div>
+  <script src="vendor/html2canvas.min.js"></script>
+  <script src="vendor/container.js"></script>
+  <script src="vendor/button.js"></script>
   <script>
     const v = document.getElementById('v'), msg = document.getElementById('msg');
-    const last = document.getElementById('last'), shutter = document.getElementById('shutter');
+    const last = document.getElementById('last'), bar = document.getElementById('bar');
 
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
       .then(s => { v.srcObject = s; })
-      .catch(e => { msg.hidden = false; msg.textContent = 'Camera unavailable: ' + e.name; shutter.disabled = true; });
+      .catch(e => { msg.hidden = false; msg.textContent = 'Camera unavailable: ' + e.name; });
 
     // shortcut: keeps the shot in memory only, F9 (save/share) will persist it
-    shutter.onclick = () => {
+    const shoot = () => {
       if (!v.videoWidth) return;
       const c = document.createElement('canvas');
       c.width = v.videoWidth; c.height = v.videoHeight;
       c.getContext('2d').drawImage(v, 0, 0);
       last.src = c.toDataURL('image/jpeg', 0.92);
     };
+
+    const dock = new Container({ type: 'pill', borderRadius: 48, tintOpacity: 0.25 });
+    dock.addChild(new Button({ text: '\u25CF', size: 28, type: 'circle', onClick: shoot }));
+    bar.appendChild(dock.element);
   </script>
 </body>
 </html>

@@ -19,15 +19,21 @@ Rewritten after every step. Read this first.
 - Step 3: scaffold. Capacitor 8 + Android platform, app id `com.nomoney.cam`.
 - Step 4: APK workflow. Runs #1 and #2 green, ~3.7 MB debug APK each.
 - Step 5 (F1): live rear-camera preview (`getUserMedia`), shutter draws the frame to a canvas and shows it as a thumbnail. `CAMERA` permission added to the manifest. Not yet run on a device.
+- Step 6: liquid-glass shell. Library files vendored into `www/vendor/` (container.js, button.js, glass.css, plus html2canvas 1.4.1, both MIT, licenses alongside). Shutter is now a glass circle button inside a glass pill dock on a gradient bottom bar. Checked in headless Chromium with a fake camera: glass renders, click captures a frame.
 
 ## Next steps
-1. Install the APK on a phone and confirm the permission prompt and preview work. Fix first if not.
-2. App shell with liquid-glass controls (replace the plain shutter and thumbnail).
-3. F9 save/share, then F2 film look, then F3 presets, one per commit.
+1. Install the APK on a phone and confirm the permission prompt, preview and glass button work. Fix first if not.
+2. F9 save/share the captured photo.
+3. F2 film look, then F3 presets, one per commit.
 4. Should-haves: gallery (F8), dust/frames (F4/F5), double exposure (F6), import (F7).
 5. Could-haves: front/rear toggle (F11), development wait (F10).
 
 ## Could be better
+- Glass is a still: liquid-glass-js refracts one html2canvas snapshot of the page, not a live feed. So controls stay on the static bottom bar and never overlap the live preview. Glass floating over the video would show a frozen frame.
+- The snapshot is taken once at load. If the bar's layout or background changes later (rotation, new controls), the glass will refract stale content. Retake it then.
+- The thumbnail is a plain image beside the dock, not glass. Could move into the dock.
+- Vendored libraries are copies (liquid-glass-js has no npm package). Note the source commit when updating them.
+- WebGL cost on low-end phones is unmeasured.
 - The APK has never been run on a device. Camera preview and permission flow are unverified.
 - Capture is in memory only: the thumbnail is lost on restart until F9 lands.
 - Captures use the preview's resolution, not the sensor's full resolution. Revisit with ImageCapture or a native plugin if quality matters.
@@ -43,10 +49,12 @@ Rewritten after every step. Read this first.
 - Stack: plain static web UI wrapped with Capacitor, because liquid-glass-js is a browser library.
 - No bundler: `www/` is served as is. Add one only if liquid-glass-js needs it.
 - Capacitor 8 needs Java 21 and Node 22. The original task said JDK 17; that fails with this Capacitor version, so CI uses 21.
+- liquid-glass-js and html2canvas are vendored into `www/vendor/` (no CDN) so the APK works offline.
 - Camera uses the WebView's `getUserMedia` with the manifest `CAMERA` permission, no camera plugin: fewer dependencies.
 - No shop, payments or membership.
 
 ## Open questions
 - Final app name and brand.
 - Whether the glass effect performs well on low-end phones.
+- Do you want glass over the live preview? It would need a different approach than snapshot sampling.
 - Is `getUserMedia` quality good enough, or do we need a native camera plugin?
