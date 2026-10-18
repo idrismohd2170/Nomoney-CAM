@@ -20,15 +20,19 @@ Rewritten after every step. Read this first.
 - Step 4: APK workflow. Runs #1 and #2 green, ~3.7 MB debug APK each.
 - Step 5 (F1): live rear-camera preview (`getUserMedia`), shutter draws the frame to a canvas and shows it as a thumbnail. `CAMERA` permission added to the manifest. Not yet run on a device.
 - Step 6: liquid-glass shell. Library files vendored into `www/vendor/` (container.js, button.js, glass.css, plus html2canvas 1.4.1, both MIT, licenses alongside). Shutter is now a glass circle button inside a glass pill dock on a gradient bottom bar. Checked in headless Chromium with a fake camera: glass renders, click captures a frame.
+- Step 7a (F2): film look. `www/film.js` `develop()` applies S-curve contrast, lifted blacks, colour tint, saturation, vignette and grain to every capture (hardcoded to the `sunny` preset for now). Pure function, so `node test/film.test.js` checks it with no browser; CI runs that test before the APK build. Checked a real capture in headless Chromium: grain, vignette and fade visible.
 
 ## Next steps
 1. Install the APK on a phone and confirm the permission prompt, preview and glass button work. Fix first if not.
-2. F9 save/share the captured photo.
-3. F2 film look, then F3 presets, one per commit.
+2. F3 presets: three are already defined in `film.js` (sunny, mono, dusk), add a glass button to pick one.
+3. F9 save/share the captured photo. Needs a Capacitor plugin (Filesystem and/or Share): ask before adding, WebView cannot download or share files by itself.
 4. Should-haves: gallery (F8), dust/frames (F4/F5), double exposure (F6), import (F7).
 5. Could-haves: front/rear toggle (F11), development wait (F10).
 
 ## Could be better
+- No sharpening pass in the film look (needs a neighbour kernel). Add it if shots look soft on a device.
+- Preset numbers are guesses tuned only against a test pattern. Tune by eye on real photos.
+- `develop()` runs on the main thread over every pixel. Fine in testing, unmeasured on a phone at full camera resolution. Downscale or use a worker if capture feels slow.
 - Glass is a still: liquid-glass-js refracts one html2canvas snapshot of the page, not a live feed. So controls stay on the static bottom bar and never overlap the live preview. Glass floating over the video would show a frozen frame.
 - The snapshot is taken once at load. If the bar's layout or background changes later (rotation, new controls), the glass will refract stale content. Retake it then.
 - The thumbnail is a plain image beside the dock, not glass. Could move into the dock.
@@ -51,6 +55,7 @@ Rewritten after every step. Read this first.
 - Capacitor 8 needs Java 21 and Node 22. The original task said JDK 17; that fails with this Capacitor version, so CI uses 21.
 - liquid-glass-js and html2canvas are vendored into `www/vendor/` (no CDN) so the APK works offline.
 - Camera uses the WebView's `getUserMedia` with the manifest `CAMERA` permission, no camera plugin: fewer dependencies.
+- Film look is plain canvas maths in a pure function, no image library. Looks are our own named presets.
 - No shop, payments or membership.
 
 ## Open questions

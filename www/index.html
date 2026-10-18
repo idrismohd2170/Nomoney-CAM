@@ -25,6 +25,7 @@
   <script src="vendor/html2canvas.min.js"></script>
   <script src="vendor/container.js"></script>
   <script src="vendor/button.js"></script>
+  <script src="film.js"></script>
   <script>
     const v = document.getElementById('v'), msg = document.getElementById('msg');
     const last = document.getElementById('last'), bar = document.getElementById('bar');
@@ -38,7 +39,9 @@
       if (!v.videoWidth) return;
       const c = document.createElement('canvas');
       c.width = v.videoWidth; c.height = v.videoHeight;
-      c.getContext('2d').drawImage(v, 0, 0);
+      const ctx = c.getContext('2d');
+      ctx.drawImage(v, 0, 0);
+      ctx.putImageData(develop(ctx.getImageData(0, 0, c.width, c.height), PRESETS.sunny, Date.now()), 0, 0);
       last.src = c.toDataURL('image/jpeg', 0.92);
     };
 

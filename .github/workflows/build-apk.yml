@@ -16,6 +16,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: node test/film.test.js
       - run: npx cap sync android
       - run: ./gradlew assembleDebug
         working-directory: android
