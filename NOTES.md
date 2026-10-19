@@ -3,73 +3,59 @@
 Rewritten after every step. Read this first.
 
 ## Context
-- Goal: clean-room Android camera app that rebuilds the features and flows of the app at
-  https://play.google.com/store/apps/details?id=com.blink.academy.nomopro, using public listing info only.
-- Clean-room: no decompiling, no original name, logo, icons, copy, filters or LUT data.
+- Goal: clean-room Android film-camera app that rebuilds the features and flows of the app at
+  https://play.google.com/store/apps/details?id=com.blink.academy.nomopro, using the public listing description only. Everything is free and unlocked.
+- Clean-room: no decompiling, no original name, logo, icons, camera/look names, lookup data, shader code, frames or copy. Our own cameras, names and generated assets.
 - Working name is the repo name. **Rebrand before any public release.**
 - All code follows the ponytail skill (full level): smallest change that fully works.
 - UI surfaces use https://github.com/dashersw/liquid-glass-js.
-- Feature list and build order: docs/recon.md.
+- Feature list and build order: docs/recon.md (rewritten in phase 2).
 - Layout: `www/` is the web app (static, no bundler), `android/` is the generated Capacitor project, `capacitor.config.json` points Capacitor at `www/`.
 - CI: `.github/workflows/build-apk.yml` builds a debug APK on every push. Download it from the run's Artifacts (`nomoney-cam-debug-apk`).
+- Phase 2 direction: one WebGL shader pipeline drives both the live viewfinder and capture. CPU `develop()` in `www/film.js` stays as the fallback and the test reference.
 
 ## Done
-- Step 1: NOTES.md created.
-- Step 2: docs/recon.md written from the public listing (11 features, 4 must-haves: F1 capture, F2 film look, F3 camera presets, F9 save/share).
-- Step 3: scaffold. Capacitor 8 + Android platform, app id `com.nomoney.cam`.
-- Step 4: APK workflow. Runs #1 and #2 green, ~3.7 MB debug APK each.
-- Step 5 (F1): live rear-camera preview (`getUserMedia`), shutter draws the frame to a canvas and shows it as a thumbnail. `CAMERA` permission added to the manifest. Not yet run on a device.
-- Step 6: liquid-glass shell. Library files vendored into `www/vendor/` (container.js, button.js, glass.css, plus html2canvas 1.4.1, both MIT, licenses alongside). Shutter is now a glass circle button inside a glass pill dock on a gradient bottom bar. Checked in headless Chromium with a fake camera: glass renders, click captures a frame.
-- Step 7a (F2): film look. `www/film.js` `develop()` applies S-curve contrast, lifted blacks, colour tint, saturation, vignette and grain to every capture (hardcoded to the `sunny` preset for now). Pure function, so `node test/film.test.js` checks it with no browser; CI runs that test before the APK build. Checked a real capture in headless Chromium: grain, vignette and fade visible.
-- Step 7b (F3): look presets. A glass pill in the dock cycles Sunny, Mono, Dusk (our own names and numbers from `film.js`); the chosen look is applied on the next capture. Checked in headless Chromium: label cycles and wraps, a Mono shot has identical R, G, B.
-- Step 7c (F9): share/save. Added `@capacitor/filesystem` and `@capacitor/share` (approved by you). A glass Share pill writes the latest shot to the app cache and opens the Android share sheet, which also offers saving to the device. No storage permission needed. Checked with a mocked Capacitor bridge in headless Chromium: right calls, real JPEG data, plus a browser-only fallback message. Dock fits at 320, 360 and 412 px wide.
-- All four must-haves (F1, F2, F3, F9) are now built. None has run on a real phone yet.
+- Phase 1 (steps 1-7c): scaffold, APK workflow, camera preview and capture, liquid-glass shell, CPU film look, three manual looks, share via the share sheet. All green in CI, none run on a real phone.
+- Phase 2 step 1: docs/recon.md rewritten as a new feature matrix (F1-F10, no paid rows, no shop). `reference/` added to .gitignore in case reference media is supplied later.
 
 ## Next steps
-1. Install the APK on a phone and confirm the permission prompt, preview and glass button work. Fix first if not.
-2. Confirm Share works on the phone: the app calls `Capacitor.Plugins.Filesystem/Share` directly because there is no bundler. That is the documented no-bundler route but only a mock has tested it.
-3. Show the selected look on the viewfinder (live preview is still unprocessed, so what you see is not what you get).
-4. Should-haves: gallery (F8), dust/frames (F4/F5), double exposure (F6), import (F7).
-5. Could-haves: front/rear toggle (F11), development wait (F10).
+1. GPU pipeline core: WebGL renderer with tone curve, generated colour grade, grain, vignette, sharpening, driven by a parameter object. Parameter generation as a pure function with a node test.
+2. Overlays: procedural dust, light leak, frames.
+3. Camera library (6+ own cameras, random values inside each camera's ranges per shot).
+4. Glass camera picker.
+5. Live viewfinder through the pipeline, full-resolution capture, front/rear toggle.
+6. Double exposure.
+7. Photo import.
+8. Gallery and save (persist, view, delete, share).
+9. Optional development wait (settings toggle, default off).
+10. docs/device-test.md and layout checks at 320/360/412 px.
 
 ## Could be better
-- Share is the only save path: the user must pick "save" in the share sheet. A direct save to Gallery/Pictures needs MediaStore or a storage permission. Add if people expect one tap.
-- Only the latest shot is kept, in memory. Restarting loses it. The gallery (F8) is the fix.
-- Cached share files in the app cache are never cleaned up by us. Android clears the cache under pressure, but a cleanup could be added.
-- Share and the plugin calls are unverified on a device. Errors show in the on-screen message line.
-- The live preview does not show the selected look, only the saved shot does. A CSS filter approximation on the `<video>` could preview it cheaply.
-- Preset picker is a single cycle button, so you cannot see all looks at once. Fine for three, awkward for many.
-- The preset pill is sized from "Sunny", so longer future names would overflow it.
-- No sharpening pass in the film look (needs a neighbour kernel). Add it if shots look soft on a device.
-- Preset numbers are guesses tuned only against a test pattern. Tune by eye on real photos.
-- `develop()` runs on the main thread over every pixel. Fine in testing, unmeasured on a phone at full camera resolution. Downscale or use a worker if capture feels slow.
-- Glass is a still: liquid-glass-js refracts one html2canvas snapshot of the page, not a live feed. So controls stay on the static bottom bar and never overlap the live preview. Glass floating over the video would show a frozen frame.
-- The snapshot is taken once at load. If the bar's layout or background changes later (rotation, new controls), the glass will refract stale content. Retake it then.
-- The thumbnail is a plain image beside the dock, not glass. Could move into the dock.
+- No real-phone testing yet. The camera permission prompt, share sheet, glass rendering and (soon) WebGL performance are all unverified on a device.
+- No reference screenshots or recordings. Looks will be tuned by eye. A gitignored `reference/` folder of the user's own screenshots would allow side-by-side comparison.
+- Glass is a still: liquid-glass-js refracts one html2canvas snapshot of the page, not a live feed. Controls stay on the static bottom bar and never overlap the live preview.
+- The glass snapshot is taken once at load. If layout or background changes later, glass refracts stale content. Retake it then.
 - Vendored libraries are copies (liquid-glass-js has no npm package). Note the source commit when updating them.
-- WebGL cost on low-end phones is unmeasured.
-- The APK has never been run on a device. Camera preview and permission flow are unverified.
-- Captures use the preview's resolution, not the sensor's full resolution. Revisit with ImageCapture or a native plugin if quality matters.
-- No front/rear toggle, so a device with no rear camera falls back to whatever the browser picks.
-- CI has no Gradle cache and the actions are pinned to major tags only. Add a cache if builds get slow.
+- Only the latest shot is kept, in memory, until the gallery step.
+- Share sheet is the only save path until the gallery step.
+- No sharpening, dust, light leak or frames in the current CPU look. Coming with the GPU pipeline.
+- CI has no Gradle cache and the actions are pinned to major tags only.
 - The APK is debug-signed. It is for testing, not for release.
 - `npm install` printed audit warnings. Not reviewed yet. Do not run `npm audit fix --force`.
 - App id `com.nomoney.cam` is a placeholder until the rebrand.
-- Recon is thin: the listing names effect types but not parameters. Tune the look by eye on a real device.
 - The authoring environment's `gh` token is invalid, so CI status is checked through the public GitHub API.
 
 ## Decisions
-- Stack: plain static web UI wrapped with Capacitor, because liquid-glass-js is a browser library.
-- No bundler: `www/` is served as is. Add one only if liquid-glass-js needs it.
-- Capacitor 8 needs Java 21 and Node 22. The original task said JDK 17; that fails with this Capacitor version, so CI uses 21.
+- Stack: plain static web UI wrapped with Capacitor, because liquid-glass-js is a browser library. No bundler.
+- Capacitor 8 needs Java 21 and Node 22, so CI uses JDK 21.
 - liquid-glass-js and html2canvas are vendored into `www/vendor/` (no CDN) so the APK works offline.
-- Camera uses the WebView's `getUserMedia` with the manifest `CAMERA` permission, no camera plugin: fewer dependencies.
-- Save/share uses the share sheet via two Capacitor plugins (Filesystem for the cache file, Share for the sheet). WebView cannot download or share files itself. Approved by the user.
-- Film look is plain canvas maths in a pure function, no image library. Looks are our own named presets.
-- No shop, payments or membership.
+- Camera uses the WebView's `getUserMedia` with the manifest `CAMERA` permission, no camera plugin.
+- Save/share uses the share sheet via `@capacitor/filesystem` and `@capacitor/share` (approved).
+- Looks run on the GPU (WebGL shader pipeline) because a per-frame CPU loop is too slow for a live viewfinder on phones.
+- No shop, payments, membership, locked content, face beauty or ML.
 
 ## Open questions
 - Final app name and brand.
-- Whether the glass effect performs well on low-end phones.
+- Whether WebGL plus the glass effect performs well on low-end phones.
 - Do you want glass over the live preview? It would need a different approach than snapshot sampling.
-- Is `getUserMedia` quality good enough, or do we need a native camera plugin?
+- Is `getUserMedia` at its highest resolution good enough, or do we need a native camera plugin?
