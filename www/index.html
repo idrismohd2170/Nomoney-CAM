@@ -28,6 +28,19 @@
     #bar .glass-container { gap: 6px; padding: 6px; }
     #last { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; background: #222; }
     #msg { text-align: center; padding: 8px; }
+    #last { cursor: pointer; }
+    /* gallery: full-screen grid, and a viewer over it */
+    .sheet { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; background: #111; }
+    [hidden] { display: none !important; }
+    .sheet header { display: flex; align-items: center; justify-content: space-between; padding: 12px; }
+    .sheet h2 { margin: 0; font-size: 18px; font-weight: 600; }
+    .sheet button { font: 15px system-ui, sans-serif; color: #fff; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.28); border-radius: 999px; padding: 8px 16px; }
+    #grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; align-content: start; }
+    #grid img { width: 100%; aspect-ratio: 1; object-fit: cover; background: #222; }
+    #empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #999; }
+    #viewImg { flex: 1; min-height: 0; width: 100%; object-fit: contain; }
+    #viewBar { display: flex; justify-content: center; gap: 10px; padding: 14px 12px 24px; }
+    #viewBar .danger { background: rgba(220,60,60,.45); }
   </style>
 </head>
 <body>
@@ -40,8 +53,21 @@
   </div>
   <div id="msg" hidden></div>
   <div id="bar">
-    <img id="last" alt="">
+    <img id="last" alt="Open gallery" role="button" tabindex="0">
   </div>
+  <section id="gal" class="sheet" hidden aria-label="Gallery">
+    <header><h2>Gallery</h2><button id="galClose">Close</button></header>
+    <div id="empty" hidden>No photos yet</div>
+    <div id="grid"></div>
+  </section>
+  <section id="viewer" class="sheet" hidden aria-label="Photo">
+    <header><h2 id="viewTitle"></h2><button id="viewClose">Back</button></header>
+    <img id="viewImg" alt="">
+    <div id="viewBar">
+      <button id="viewShare">Share</button>
+      <button id="viewDel">Delete</button>
+    </div>
+  </section>
   <script src="vendor/html2canvas.min.js"></script>
   <script src="vendor/container.js"></script>
   <script src="vendor/button.js"></script>
@@ -49,6 +75,7 @@
   <script src="film-params.js"></script>
   <script src="cameras.js"></script>
   <script src="film-gl.js"></script>
+  <script src="store.js"></script>
   <script>
     const v = document.getElementById('v'), msg = document.getElementById('msg'), viewEl = document.getElementById('view');
     const last = document.getElementById('last'), bar = document.getElementById('bar');
@@ -115,8 +142,25 @@
     };
     const clearHeld = () => { if (held) held.remove(); held = null; };
 
-    // shortcut: only the latest shot is kept (in memory), a gallery (F8) would keep more
-    let shot = null, busy = false;
+    // Every shot is stored as a blob in IndexedDB (see store.js); `latest` also keeps the newest one in memory.
+    const toBlob = (c, q) => new Promise(r => c.toBlob(r, 'image/jpeg', q));
+    let latest = null, lastUrl = null;
+    const showLast = blob => { if (lastUrl) URL.revokeObjectURL(lastUrl); last.src = lastUrl = URL.createObjectURL(blob); };
+    const note = t => { msg.hidden = false; msg.textContent = t; setTimeout(() => { msg.hidden = true; }, 3000); };
+    const keep = async c => {
+      const blob = await toBlob(c, 0.92);
+      const tc = document.createElement('canvas'), k = 256 / Math.max(c.width, c.height);
+      tc.width = Math.round(c.width * k); tc.height = Math.round(c.height * k);
+      tc.getContext('2d').drawImage(c, 0, 0, tc.width, tc.height);
+      const rec = { id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), t: Date.now(), cam: CAMERAS[cam].name, thumb: await toBlob(tc, 0.8) };
+      latest = { rec, blob };
+      showLast(rec.thumb);
+      try { await shotStore.add(rec, blob); } catch (e) { note('Could not store the photo: ' + (e.message || e)); }
+    };
+    // restore the newest thumbnail after a restart
+    shotStore.all().then(list => { if (list[0] && !latest) { showLast(list[0].thumb); } }).catch(() => {});
+
+    let busy = false;
     const shoot = async () => {
       if (busy || !v.videoWidth) return;
       busy = true;
@@ -142,8 +186,7 @@
           ctx.drawImage(src, 0, 0);
           ctx.putImageData(develop(ctx.getImageData(0, 0, c.width, c.height), p, Date.now()), 0, 0);
         }
-        last.src = c.toDataURL('image/jpeg', 0.92);
-        shot = last.src.split(',')[1];
+        await keep(c);
         made = true;
       } finally {
         busy = false;
@@ -161,17 +204,61 @@
 
     document.getElementById('flip').onclick = () => { clearHeld(); facing = facing === 'user' ? 'environment' : 'user'; startCamera(); };
 
-    // Hands the latest shot to the system share sheet, which also offers "save to device".
-    const share = async () => {
-      if (!shot) return;
+    // Hands a photo to the system share sheet, which also offers "save to device".
+    const b64 = blob => new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result.split(',')[1]); f.readAsDataURL(blob); });
+    const shareBlob = async blob => {
+      if (!blob) return;
       const cap = window.Capacitor;
-      if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) { msg.hidden = false; msg.textContent = 'Sharing works in the Android app'; return; }
+      if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) { note('Sharing works in the Android app'); return; }
       try {
-        const { uri } = await cap.Plugins.Filesystem.writeFile({ path: 'shot-' + Date.now() + '.jpg', data: shot, directory: 'CACHE' });
+        const { uri } = await cap.Plugins.Filesystem.writeFile({ path: 'shot-' + Date.now() + '.jpg', data: await b64(blob), directory: 'CACHE' });
         await cap.Plugins.Share.share({ files: [uri] });
       } catch (e) {
-        if (!/cancel/i.test(e.message || '')) { msg.hidden = false; msg.textContent = 'Share failed: ' + (e.message || e); }
+        if (!/cancel/i.test(e.message || '')) note('Share failed: ' + (e.message || e));
       }
+    };
+    const share = () => shareBlob(latest && latest.blob);
+
+    // Gallery: grid of stored thumbnails, tap one to view, share or delete it.
+    const $ = id => document.getElementById(id);
+    const gal = $('gal'), grid = $('grid'), viewer = $('viewer'), viewImg = $('viewImg');
+    let gridUrls = [], current = null, viewUrl = null;
+    const drop = urls => { urls.forEach(u => URL.revokeObjectURL(u)); urls.length = 0; };
+    const openGallery = async () => {
+      gal.hidden = false;
+      let list = [];
+      try { list = await shotStore.all(); } catch (e) { note('Could not read the gallery: ' + (e.message || e)); }
+      drop(gridUrls); grid.textContent = '';
+      $('empty').hidden = list.length > 0;
+      list.forEach(rec => {
+        const im = new Image(); im.alt = rec.cam + ' photo'; im.src = URL.createObjectURL(rec.thumb); gridUrls.push(im.src);
+        im.onclick = () => openViewer(rec);
+        grid.appendChild(im);
+      });
+    };
+    const closeGallery = () => { gal.hidden = true; drop(gridUrls); grid.textContent = ''; };
+    const openViewer = async rec => {
+      const blob = await shotStore.full(rec.id);
+      if (!blob) { note('Photo data is missing'); return; }
+      current = { rec, blob };
+      if (viewUrl) URL.revokeObjectURL(viewUrl);
+      viewImg.src = viewUrl = URL.createObjectURL(blob);
+      $('viewTitle').textContent = rec.cam + ' \u00B7 ' + new Date(rec.t).toLocaleString();
+      viewer.hidden = false;
+    };
+    const closeViewer = () => { viewer.hidden = true; viewImg.removeAttribute('src'); if (viewUrl) URL.revokeObjectURL(viewUrl); viewUrl = null; current = null; };
+    last.onclick = openGallery;
+    last.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') openGallery(); };
+    $('galClose').onclick = closeGallery;
+    $('viewClose').onclick = closeViewer;
+    $('viewShare').onclick = () => shareBlob(current && current.blob);
+    $('viewDel').onclick = async () => {
+      if (!current || !confirm('Delete this photo?')) return;
+      try { await shotStore.remove(current.rec.id); } catch (e) { note('Delete failed: ' + (e.message || e)); return; }
+      if (latest && latest.rec.id === current.rec.id) latest = null;
+      closeViewer(); await openGallery();
+      const list = await shotStore.all().catch(() => []);
+      if (list[0]) showLast(list[0].thumb); else { last.removeAttribute('src'); lastUrl = null; }
     };
 
     const cams = document.getElementById('cams');

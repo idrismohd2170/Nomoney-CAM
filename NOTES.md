@@ -23,13 +23,16 @@ Rewritten after every step. Read this first.
 - Phase 2 step 5: camera picker. The cycle pill is gone. A scrollable row of frosted chips (one per camera, CSS `backdrop-filter`) sits over the bottom of the viewfinder; the selected chip is highlighted and scrolled into view. The dock is now thumbnail, shutter (liquid glass) and Share (liquid glass). Checked in headless Chromium with the fake camera: 8 chips, selecting 5, 7 and 1 sets the right camera, the strip scrolls, nothing overflows at 320, 360 and 412 px, shots from different cameras differ.
 - Phase 2 step 6: live viewfinder and full-resolution capture. A second renderer draws every new camera frame through the same shader onto a canvas over the video (`requestVideoFrameCallback`, falling back to `requestAnimationFrame`; without WebGL the plain video shows). `next` holds the look of the next shot: the viewfinder shows it, the shutter uses exactly it, then a fresh one is made (so the dust, leak and frame you see are the ones you get). The preview stream asks for 1280 wide at 4:3; the photo uses `ImageCapture.takePhoto()` for the sensor's full size, going through a 2D canvas first (WebGL ignores the flip flag for bitmaps), and falls back to the preview frame. A Flip chip toggles front/rear (front preview mirrored, saved photo not). Checked in headless Chromium: Noir viewfinder has zero channel spread and Amber is coloured, the photo used the previewed look, a stubbed 4000x3000 still comes out the right way up at full size, the failure fallback gives the preview size, Flip restarts the stream.
 - Phase 2 step 7: double exposure. A Double chip (top-left of the viewfinder) toggles the mode. In double mode the first shutter press keeps the raw full-size frame (shown at 40% opacity over the viewfinder, mirrored for the front camera) and makes no photo. The second press blends the two frames on a 2D canvas, randomly `screen` (adds light) or `lighten` (brightest wins), clears the held frame and develops the blend once through the shader (CPU fallback as before). The look refreshes only after a photo is actually made. Toggling Double off or on, or pressing Flip, drops a half-finished pair. Checked in headless Chromium with stubbed 4000x3000 stills (red top-left, blue bottom-right): both blend modes keep both subjects, blend maths match (screen of (200,40,40)+(40,40,200) gives (209,74,209), lighten gives (200,40,200)), the ghost has the full still size and is removed after the second press, single shots still work, no page errors.
+- Phase 3 step 1: storage and gallery (follow-up brief: save, gallery, redesign, modes). `www/store.js` keeps shots in IndexedDB as blobs: a small `shots` record (id, time, camera, 256px thumbnail blob) plus the full JPEG in `full`. Every shot is stored after it is developed. The thumbnail on the main bar opens a full-screen grid; tapping a photo opens a viewer with Share and Delete (with confirm). The newest thumbnail is restored at startup. `test/store.test.js` covers the sort helper. Checked in headless Chromium: 2 shots stored, grid shows 2, viewer shows the full 1920x1080 image, delete removes it, a restart keeps the remaining photo, deleting the last one shows the empty state and clears the main thumbnail. Bug found and fixed: `#empty{display:flex}` overrode the `hidden` attribute, so "No photos yet" showed over the grid; a global `[hidden]{display:none!important}` fixes it.
 - Bug found and fixed in step 2: a fixed 3-vector like `tint: [1,1,1]` was read as a [min,max] range and became NaN, blackening Mono. `pickVec` now handles vectors and the tests check for it.
 
 ## Next steps
-1. Photo import.
-2. Gallery and save (persist, view, delete, share). Store blobs, not data URLs: a 12 MP data URL is a multi-megabyte string.
+1. Save to device (in-repo MediaStore plugin, Save in viewer and after each shot).
+2. Photo import.
 3. Optional development wait (settings toggle, default off).
-4. docs/device-test.md and layout checks at 320/360/412 px.
+4. Visual redesign (taste-skill), tokens, original SVG icons.
+5. Camera modes: format, timer, torch, roll, persistence.
+6. docs/device-test.md and layout checks at 320/360/412 px.
 
 ## Could be better
 - The picker chips are plain CSS frosted glass, not liquid-glass-js. The library gives every glass element its own WebGL context and a per-frame render loop, and 8 more of them would be too heavy on phones. Swap in real glass later only if it can share one context.
@@ -47,8 +50,9 @@ Rewritten after every step. Read this first.
 - Double exposure holds up to three full-size canvases at once (held frame, second frame, blend), about 48 MB each at 12 MP. Could stall low-memory phones; downscale the held frame if so.
 - The blend mode is random per pair, there is no way to choose it. The held frame is not saved if the app is closed mid-pair.
 - The held ghost is shown at the still's framing, which may differ slightly from the preview on a real phone.
-- Only the latest shot is kept, in memory, until the gallery step.
-- Share sheet is the only save path until the gallery step.
+- The gallery has no multi-select, no pagination (all thumbnails load at once) and no swipe between photos in the viewer.
+- Photos are stored in the WebView's IndexedDB, so clearing app data deletes them. Save to Photos (next step) is the durable copy.
+- Share sheet is still the only way out of the app until the save step.
 - The CPU fallback has no sharpening, colour cube (split tone), dust, light leak or frames (it has the tone curve, tint, saturation, vignette and grain). Only the GPU path does. Phones without WebGL get a plainer look.
 - Scripts share one global scope (no bundler), so a top-level name in one file can break the inline app script. This already bit once (`pick`). Keep app-script variable names distinct from the helpers' names.
 - No `webglcontextlost` handling: if the GPU context is lost, rendering stops until reload.
@@ -61,7 +65,6 @@ Rewritten after every step. Read this first.
 - Preview is requested at 4:3 but a phone's still may be a different shape or rotation, so the saved photo can frame slightly differently than the viewfinder. Check on a phone.
 - The viewfinder grain, dust and leak are static (one draw per shot), not animated.
 - Two WebGL contexts (viewfinder, capture) plus one per glass element. Browsers cap active contexts, and old phones may struggle. Unmeasured.
-- The thumbnail is set from a data URL of the full-size JPEG. Heavy for 12 MP photos.
 - CI has no Gradle cache and the actions are pinned to major tags only.
 - The APK is debug-signed. It is for testing, not for release.
 - `npm install` printed audit warnings. Not reviewed yet. Do not run `npm audit fix --force`.
