@@ -27,6 +27,9 @@
   <script src="vendor/container.js"></script>
   <script src="vendor/button.js"></script>
   <script src="film.js"></script>
+  <script src="film-params.js"></script>
+  <script src="cameras.js"></script>
+  <script src="film-gl.js"></script>
   <script>
     const v = document.getElementById('v'), msg = document.getElementById('msg');
     const last = document.getElementById('last'), bar = document.getElementById('bar');
@@ -35,18 +38,23 @@
       .then(s => { v.srcObject = s; })
       .catch(e => { msg.hidden = false; msg.textContent = 'Camera unavailable: ' + e.name; });
 
-    const looks = Object.keys(PRESETS);
-    let look = 0;
+    let cam = 0;
+    const gpu = createRenderer(); // offscreen, used for capture
 
     // shortcut: only the latest shot is kept (in memory), a gallery (F8) would keep more
     let shot = null;
     const shoot = () => {
       if (!v.videoWidth) return;
-      const c = document.createElement('canvas');
-      c.width = v.videoWidth; c.height = v.videoHeight;
-      const ctx = c.getContext('2d');
-      ctx.drawImage(v, 0, 0);
-      ctx.putImageData(develop(ctx.getImageData(0, 0, c.width, c.height), PRESETS[looks[look]], Date.now()), 0, 0);
+      const p = makeParams(CAMERAS[cam], Date.now());
+      let c;
+      if (gpu.ok) { gpu.render(v, p); c = gpu.canvas; }
+      else { // no WebGL: slower CPU look
+        c = document.createElement('canvas');
+        c.width = v.videoWidth; c.height = v.videoHeight;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(v, 0, 0);
+        ctx.putImageData(develop(ctx.getImageData(0, 0, c.width, c.height), p, Date.now()), 0, 0);
+      }
       last.src = c.toDataURL('image/jpeg', 0.92);
       shot = last.src.split(',')[1];
     };
@@ -65,11 +73,11 @@
     };
 
     const dock = new Container({ type: 'pill', borderRadius: 48, tintOpacity: 0.25 });
-    const pick = new Button({ text: 'Sunny', size: 18, type: 'pill', onClick: () => {
-      look = (look + 1) % looks.length;
-      pick.textElement.textContent = looks[look][0].toUpperCase() + looks[look].slice(1);
+    const camBtn = new Button({ text: 'Sunny', size: 18, type: 'pill', onClick: () => {
+      cam = (cam + 1) % CAMERAS.length;
+      camBtn.textElement.textContent = CAMERAS[cam].name;
     } });
-    dock.addChild(pick);
+    dock.addChild(camBtn);
     dock.addChild(new Button({ text: '\u25CF', size: 28, type: 'circle', onClick: shoot }));
     dock.addChild(new Button({ text: 'Share', size: 18, type: 'pill', onClick: share }));
     bar.appendChild(dock.element);

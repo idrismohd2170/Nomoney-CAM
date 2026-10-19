@@ -1,12 +1,5 @@
-// Film look: tone curve + fade, colour tint, saturation, vignette, grain. In place on {data, width, height}.
-// shortcut: no sharpening pass (needs a neighbour kernel), add it if shots look soft on device.
-// Preset numbers are our own starting guesses, tune by eye on a device.
-const PRESETS = {
-  sunny: { contrast: 0.35, fade: 0.04, tint: [1.05, 1.0, 0.93], sat: 1.1, vignette: 0.25, grain: 0.05 },
-  mono:  { contrast: 0.5,  fade: 0.02, tint: [1, 1, 1],         sat: 0,   vignette: 0.35, grain: 0.09 },
-  dusk:  { contrast: 0.2,  fade: 0.12, tint: [0.96, 1.0, 1.08], sat: 0.85, vignette: 0.3, grain: 0.07 }
-};
-
+// CPU film look: fallback when WebGL is unavailable, and the reference the tests check. Takes makeParams() output.
+// shortcut: no sharpening, dust, leak or frame on this path, and no colour cube (split tone), the GPU path has them.
 function develop(img, p, seed = 1) {
   const { data, width, height } = img;
   const cx = width / 2, cy = height / 2, maxD2 = cx * cx + cy * cy;
@@ -32,4 +25,4 @@ function develop(img, p, seed = 1) {
   return img;
 }
 
-if (typeof module !== 'undefined') module.exports = { develop, PRESETS };
+if (typeof module !== 'undefined') module.exports = { develop };
