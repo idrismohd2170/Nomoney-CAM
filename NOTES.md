@@ -22,14 +22,14 @@ Rewritten after every step. Read this first.
 - Phase 2 step 4: camera library. `www/cameras.js` now has 8 own cameras (Amber, Fog, Noir, Ember, Moss, Peach, Snap, Slide), all unlocked, each a set of value ranges (tone, tint, saturation, vignette, grain, sharpening, dust, hairs, leak, frames). Every shot picks fresh values inside its camera's ranges. `test/cameras.test.js` checks: 6+ cameras, unique short names, no unknown fields (no price/lock/pro flags), ordered ranges, enough per-shot variation, and that cameras differ from one another. Viewed all 8 on one scene plus four Ember seeds: distinct looks, different leak/frame/dust per shot. App cycles through all 8 and shoots with each.
 - Phase 2 step 5: camera picker. The cycle pill is gone. A scrollable row of frosted chips (one per camera, CSS `backdrop-filter`) sits over the bottom of the viewfinder; the selected chip is highlighted and scrolled into view. The dock is now thumbnail, shutter (liquid glass) and Share (liquid glass). Checked in headless Chromium with the fake camera: 8 chips, selecting 5, 7 and 1 sets the right camera, the strip scrolls, nothing overflows at 320, 360 and 412 px, shots from different cameras differ.
 - Phase 2 step 6: live viewfinder and full-resolution capture. A second renderer draws every new camera frame through the same shader onto a canvas over the video (`requestVideoFrameCallback`, falling back to `requestAnimationFrame`; without WebGL the plain video shows). `next` holds the look of the next shot: the viewfinder shows it, the shutter uses exactly it, then a fresh one is made (so the dust, leak and frame you see are the ones you get). The preview stream asks for 1280 wide at 4:3; the photo uses `ImageCapture.takePhoto()` for the sensor's full size, going through a 2D canvas first (WebGL ignores the flip flag for bitmaps), and falls back to the preview frame. A Flip chip toggles front/rear (front preview mirrored, saved photo not). Checked in headless Chromium: Noir viewfinder has zero channel spread and Amber is coloured, the photo used the previewed look, a stubbed 4000x3000 still comes out the right way up at full size, the failure fallback gives the preview size, Flip restarts the stream.
+- Phase 2 step 7: double exposure. A Double chip (top-left of the viewfinder) toggles the mode. In double mode the first shutter press keeps the raw full-size frame (shown at 40% opacity over the viewfinder, mirrored for the front camera) and makes no photo. The second press blends the two frames on a 2D canvas, randomly `screen` (adds light) or `lighten` (brightest wins), clears the held frame and develops the blend once through the shader (CPU fallback as before). The look refreshes only after a photo is actually made. Toggling Double off or on, or pressing Flip, drops a half-finished pair. Checked in headless Chromium with stubbed 4000x3000 stills (red top-left, blue bottom-right): both blend modes keep both subjects, blend maths match (screen of (200,40,40)+(40,40,200) gives (209,74,209), lighten gives (200,40,200)), the ghost has the full still size and is removed after the second press, single shots still work, no page errors.
 - Bug found and fixed in step 2: a fixed 3-vector like `tint: [1,1,1]` was read as a [min,max] range and became NaN, blackening Mono. `pickVec` now handles vectors and the tests check for it.
 
 ## Next steps
-1. Double exposure.
-2. Photo import.
-3. Gallery and save (persist, view, delete, share). Store blobs, not data URLs: a 12 MP data URL is a multi-megabyte string.
-4. Optional development wait (settings toggle, default off).
-5. docs/device-test.md and layout checks at 320/360/412 px.
+1. Photo import.
+2. Gallery and save (persist, view, delete, share). Store blobs, not data URLs: a 12 MP data URL is a multi-megabyte string.
+3. Optional development wait (settings toggle, default off).
+4. docs/device-test.md and layout checks at 320/360/412 px.
 
 ## Could be better
 - The picker chips are plain CSS frosted glass, not liquid-glass-js. The library gives every glass element its own WebGL context and a per-frame render loop, and 8 more of them would be too heavy on phones. Swap in real glass later only if it can share one context.
@@ -44,6 +44,9 @@ Rewritten after every step. Read this first.
 - Glass is a still: liquid-glass-js refracts one html2canvas snapshot of the page, not a live feed. Controls stay on the static bottom bar and never overlap the live preview.
 - The glass snapshot is taken once at load. If layout or background changes later, glass refracts stale content. Retake it then.
 - Vendored libraries are copies (liquid-glass-js has no npm package). Note the source commit when updating them.
+- Double exposure holds up to three full-size canvases at once (held frame, second frame, blend), about 48 MB each at 12 MP. Could stall low-memory phones; downscale the held frame if so.
+- The blend mode is random per pair, there is no way to choose it. The held frame is not saved if the app is closed mid-pair.
+- The held ghost is shown at the still's framing, which may differ slightly from the preview on a real phone.
 - Only the latest shot is kept, in memory, until the gallery step.
 - Share sheet is the only save path until the gallery step.
 - The CPU fallback has no sharpening, colour cube (split tone), dust, light leak or frames (it has the tone curve, tint, saturation, vignette and grain). Only the GPU path does. Phones without WebGL get a plainer look.

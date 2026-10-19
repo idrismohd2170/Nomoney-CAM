@@ -10,8 +10,10 @@
     body { display: flex; flex-direction: column; }
     #view { position: relative; flex: 1; min-height: 0; }
     video, #vf { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-    #view.front video, #view.front #vf { transform: scaleX(-1); }
+    #view.front video, #view.front #vf, #view.front #ghost { transform: scaleX(-1); }
     #flip { position: absolute; top: 10px; right: 12px; }
+    #dbl { position: absolute; top: 10px; left: 12px; }
+    #ghost { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .4; pointer-events: none; }
     /* frosted chips over the live view: backdrop-filter works on live content, unlike the glass library's still snapshot */
     #cams { position: absolute; left: 0; right: 0; bottom: 10px; display: flex; gap: 8px; padding: 0 12px;
             overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
@@ -33,6 +35,7 @@
     <video id="v" autoplay playsinline muted></video>
     <canvas id="vf"></canvas>
     <button id="flip" class="chip" aria-label="Flip camera">Flip</button>
+    <button id="dbl" class="chip" aria-label="Double exposure" aria-pressed="false">Double</button>
     <div id="cams" role="listbox" aria-label="Cameras"></div>
   </div>
   <div id="msg" hidden></div>
@@ -91,13 +94,45 @@
       return v;
     };
 
+    // Double exposure: the first press keeps the raw frame (shown faintly in the viewfinder), the second blends the
+    // two and develops the result once. mode is 'screen' (adds light) or 'lighten' (brightest of the two wins).
+    let dbl = false, held = null;
+    const toCanvas = src => {
+      if (src instanceof HTMLCanvasElement) return src;
+      const c = document.createElement('canvas');
+      c.width = src.videoWidth || src.width; c.height = src.videoHeight || src.height;
+      c.getContext('2d').drawImage(src, 0, 0);
+      return c;
+    };
+    const blend = (a, b, mode) => {
+      const c = document.createElement('canvas');
+      c.width = a.width; c.height = a.height;
+      const x = c.getContext('2d');
+      x.drawImage(a, 0, 0);
+      x.globalCompositeOperation = mode;
+      x.drawImage(b, 0, 0, a.width, a.height);
+      return c;
+    };
+    const clearHeld = () => { if (held) held.remove(); held = null; };
+
     // shortcut: only the latest shot is kept (in memory), a gallery (F8) would keep more
     let shot = null, busy = false;
     const shoot = async () => {
       if (busy || !v.videoWidth) return;
       busy = true;
+      let made = false;
       try {
-        const src = await still(), p = next;
+        let src = await still();
+        if (dbl) {
+          if (!held) { // first exposure: keep it and wait for the second
+            held = toCanvas(src); held.id = 'ghost';
+            document.getElementById('vf').after(held);
+            return;
+          }
+          src = blend(held, toCanvas(src), Math.random() < 0.5 ? 'screen' : 'lighten');
+          clearHeld();
+        }
+        const p = next;
         let c;
         if (gpu.ok) { gpu.render(src, p); c = gpu.canvas; }
         else { // no WebGL: slower CPU look
@@ -109,13 +144,22 @@
         }
         last.src = c.toDataURL('image/jpeg', 0.92);
         shot = last.src.split(',')[1];
+        made = true;
       } finally {
         busy = false;
-        setTimeout(() => { next = newLook(); }, 0); // fresh dust, leak and frame for the next shot
+        if (made) setTimeout(() => { next = newLook(); }, 0); // fresh dust, leak and frame for the next shot
       }
     };
 
-    document.getElementById('flip').onclick = () => { facing = facing === 'user' ? 'environment' : 'user'; startCamera(); };
+    const dblBtn = document.getElementById('dbl');
+    dblBtn.onclick = () => {
+      dbl = !dbl;
+      dblBtn.classList.toggle('on', dbl);
+      dblBtn.setAttribute('aria-pressed', dbl);
+      clearHeld(); // switching the mode off, or on again, drops a half-finished pair
+    };
+
+    document.getElementById('flip').onclick = () => { clearHeld(); facing = facing === 'user' ? 'environment' : 'user'; startCamera(); };
 
     // Hands the latest shot to the system share sheet, which also offers "save to device".
     const share = async () => {
