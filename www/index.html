@@ -9,7 +9,9 @@
     html, body { margin: 0; height: 100%; background: #111; color: #eee; font: 16px system-ui, sans-serif; }
     body { display: flex; flex-direction: column; }
     #view { position: relative; flex: 1; min-height: 0; }
-    video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    video, #vf { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    #view.front video, #view.front #vf { transform: scaleX(-1); }
+    #flip { position: absolute; top: 10px; right: 12px; }
     /* frosted chips over the live view: backdrop-filter works on live content, unlike the glass library's still snapshot */
     #cams { position: absolute; left: 0; right: 0; bottom: 10px; display: flex; gap: 8px; padding: 0 12px;
             overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
@@ -29,6 +31,8 @@
 <body>
   <div id="view">
     <video id="v" autoplay playsinline muted></video>
+    <canvas id="vf"></canvas>
+    <button id="flip" class="chip" aria-label="Flip camera">Flip</button>
     <div id="cams" role="listbox" aria-label="Cameras"></div>
   </div>
   <div id="msg" hidden></div>
@@ -43,33 +47,75 @@
   <script src="cameras.js"></script>
   <script src="film-gl.js"></script>
   <script>
-    const v = document.getElementById('v'), msg = document.getElementById('msg');
+    const v = document.getElementById('v'), msg = document.getElementById('msg'), viewEl = document.getElementById('view');
     const last = document.getElementById('last'), bar = document.getElementById('bar');
 
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
-      .then(s => { v.srcObject = s; })
-      .catch(e => { msg.hidden = false; msg.textContent = 'Camera unavailable: ' + e.name; });
+    let cam = 0, facing = 'environment', stream = null;
+    const gpu = createRenderer();                             // offscreen, full-resolution capture
+    const vf = createRenderer(document.getElementById('vf')); // live viewfinder, same shader
+    const newLook = () => makeParams(CAMERAS[cam], Date.now());
+    let next = newLook(); // the look of the next shot: the viewfinder shows it, so the photo matches what you saw
 
-    let cam = 0;
-    const gpu = createRenderer(); // offscreen, used for capture
+    // Moderate-size preview stream keeps the shader fast; the photo itself is taken at full size in still().
+    const startCamera = async () => {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, aspectRatio: { ideal: 4 / 3 } }, audio: false });
+        v.srcObject = stream;
+        viewEl.classList.toggle('front', facing === 'user');
+        msg.hidden = true;
+      } catch (e) { msg.hidden = false; msg.textContent = 'Camera unavailable: ' + e.name; }
+    };
+    startCamera();
+
+    // Draw every new camera frame through the film shader. Without WebGL the plain video shows underneath.
+    const tick = () => {
+      if (vf.ok && v.videoWidth) vf.render(v, next);
+      v.requestVideoFrameCallback ? v.requestVideoFrameCallback(tick) : requestAnimationFrame(tick);
+    };
+    tick();
+
+    // Full-resolution photo when the browser supports ImageCapture, otherwise the current preview frame.
+    const still = async () => {
+      const track = stream && stream.getVideoTracks()[0];
+      if (window.ImageCapture && track) {
+        try {
+          const bmp = await createImageBitmap(await new ImageCapture(track).takePhoto());
+          const c = document.createElement('canvas'); // WebGL ignores its flip flag for bitmaps, so go through a 2D canvas
+          c.width = bmp.width; c.height = bmp.height;
+          c.getContext('2d').drawImage(bmp, 0, 0);
+          bmp.close();
+          return c;
+        } catch (e) { /* fall through to the preview frame */ }
+      }
+      return v;
+    };
 
     // shortcut: only the latest shot is kept (in memory), a gallery (F8) would keep more
-    let shot = null;
-    const shoot = () => {
-      if (!v.videoWidth) return;
-      const p = makeParams(CAMERAS[cam], Date.now());
-      let c;
-      if (gpu.ok) { gpu.render(v, p); c = gpu.canvas; }
-      else { // no WebGL: slower CPU look
-        c = document.createElement('canvas');
-        c.width = v.videoWidth; c.height = v.videoHeight;
-        const ctx = c.getContext('2d');
-        ctx.drawImage(v, 0, 0);
-        ctx.putImageData(develop(ctx.getImageData(0, 0, c.width, c.height), p, Date.now()), 0, 0);
+    let shot = null, busy = false;
+    const shoot = async () => {
+      if (busy || !v.videoWidth) return;
+      busy = true;
+      try {
+        const src = await still(), p = next;
+        let c;
+        if (gpu.ok) { gpu.render(src, p); c = gpu.canvas; }
+        else { // no WebGL: slower CPU look
+          c = document.createElement('canvas');
+          c.width = src.videoWidth || src.width; c.height = src.videoHeight || src.height;
+          const ctx = c.getContext('2d');
+          ctx.drawImage(src, 0, 0);
+          ctx.putImageData(develop(ctx.getImageData(0, 0, c.width, c.height), p, Date.now()), 0, 0);
+        }
+        last.src = c.toDataURL('image/jpeg', 0.92);
+        shot = last.src.split(',')[1];
+      } finally {
+        busy = false;
+        setTimeout(() => { next = newLook(); }, 0); // fresh dust, leak and frame for the next shot
       }
-      last.src = c.toDataURL('image/jpeg', 0.92);
-      shot = last.src.split(',')[1];
     };
+
+    document.getElementById('flip').onclick = () => { facing = facing === 'user' ? 'environment' : 'user'; startCamera(); };
 
     // Hands the latest shot to the system share sheet, which also offers "save to device".
     const share = async () => {
@@ -91,6 +137,7 @@
       b.textContent = c.name;
       b.onclick = () => {
         cam = i;
+        next = newLook();
         cams.querySelectorAll('.chip').forEach((x, j) => x.classList.toggle('on', j === i));
         b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
       };

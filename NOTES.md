@@ -21,15 +21,15 @@ Rewritten after every step. Read this first.
 - Phase 2 step 3: overlays. `makeParams` now also draws a 512x512 overlay (soft light-leak glow from a random edge, dust specks, short hairs) from the seed, and picks a frame (rounded border, short-side fractions, colour) from the camera's `frames` list. The shader screen-blends the overlay and draws the frame last. `test/overlay.test.js` checks determinism, sparse dust, leak peak on an edge and tinted by its colour, and frame choices. Viewed each effect alone and a full camera in headless Chromium.
 - Phase 2 step 4: camera library. `www/cameras.js` now has 8 own cameras (Amber, Fog, Noir, Ember, Moss, Peach, Snap, Slide), all unlocked, each a set of value ranges (tone, tint, saturation, vignette, grain, sharpening, dust, hairs, leak, frames). Every shot picks fresh values inside its camera's ranges. `test/cameras.test.js` checks: 6+ cameras, unique short names, no unknown fields (no price/lock/pro flags), ordered ranges, enough per-shot variation, and that cameras differ from one another. Viewed all 8 on one scene plus four Ember seeds: distinct looks, different leak/frame/dust per shot. App cycles through all 8 and shoots with each.
 - Phase 2 step 5: camera picker. The cycle pill is gone. A scrollable row of frosted chips (one per camera, CSS `backdrop-filter`) sits over the bottom of the viewfinder; the selected chip is highlighted and scrolled into view. The dock is now thumbnail, shutter (liquid glass) and Share (liquid glass). Checked in headless Chromium with the fake camera: 8 chips, selecting 5, 7 and 1 sets the right camera, the strip scrolls, nothing overflows at 320, 360 and 412 px, shots from different cameras differ.
+- Phase 2 step 6: live viewfinder and full-resolution capture. A second renderer draws every new camera frame through the same shader onto a canvas over the video (`requestVideoFrameCallback`, falling back to `requestAnimationFrame`; without WebGL the plain video shows). `next` holds the look of the next shot: the viewfinder shows it, the shutter uses exactly it, then a fresh one is made (so the dust, leak and frame you see are the ones you get). The preview stream asks for 1280 wide at 4:3; the photo uses `ImageCapture.takePhoto()` for the sensor's full size, going through a 2D canvas first (WebGL ignores the flip flag for bitmaps), and falls back to the preview frame. A Flip chip toggles front/rear (front preview mirrored, saved photo not). Checked in headless Chromium: Noir viewfinder has zero channel spread and Amber is coloured, the photo used the previewed look, a stubbed 4000x3000 still comes out the right way up at full size, the failure fallback gives the preview size, Flip restarts the stream.
 - Bug found and fixed in step 2: a fixed 3-vector like `tint: [1,1,1]` was read as a [min,max] range and became NaN, blackening Mono. `pickVec` now handles vectors and the tests check for it.
 
 ## Next steps
-1. Live viewfinder through the pipeline, full-resolution capture, front/rear toggle. Make params once per camera change (overlay costs about 43 ms), not per frame. Measure frame time.
-2. Double exposure.
-3. Photo import.
-4. Gallery and save (persist, view, delete, share).
-5. Optional development wait (settings toggle, default off).
-6. docs/device-test.md and layout checks at 320/360/412 px.
+1. Double exposure.
+2. Photo import.
+3. Gallery and save (persist, view, delete, share). Store blobs, not data URLs: a 12 MP data URL is a multi-megabyte string.
+4. Optional development wait (settings toggle, default off).
+5. docs/device-test.md and layout checks at 320/360/412 px.
 
 ## Could be better
 - The picker chips are plain CSS frosted glass, not liquid-glass-js. The library gives every glass element its own WebGL context and a per-frame render loop, and 8 more of them would be too heavy on phones. Swap in real glass later only if it can share one context.
@@ -50,10 +50,15 @@ Rewritten after every step. Read this first.
 - Scripts share one global scope (no bundler), so a top-level name in one file can break the inline app script. This already bit once (`pick`). Keep app-script variable names distinct from the helpers' names.
 - No `webglcontextlost` handling: if the GPU context is lost, rendering stops until reload.
 - html2canvas logs "Error loading image" for the empty thumbnail. Harmless, but could be silenced.
-- `makeParams` now draws the overlay: about 43 ms per call in desktop Chromium, probably several times that on a phone. Fine per shot, too slow per frame: the viewfinder must make params once per camera change, not per frame. Could cache the overlay or shrink it.
+- `makeParams` (which draws the overlay) takes about 45-55 ms in desktop Chromium, probably several times that on a phone. It runs on each camera change and once after each shot (in a timeout), so expect a small hitch then. Could cache the overlay, shrink it, or build the next one in a worker.
 - The overlay is 512x512 stretched over the picture, so dust specks get larger on full-resolution captures than on the viewfinder. Tune by eye.
 - Frames crop into the picture (they cover the edges), they do not extend the canvas.
-- GPU frame time on a real phone is unmeasured. The viewfinder step must measure it.
+- Frame times measured only on SwiftShader (a software rasteriser, not a phone GPU): about 67 ms per viewfinder frame at 640x480, 154 ms at 1280x960, 1.8 s for a 4000x3000 capture. Real GPUs should be far faster, but nothing is measured on a phone. If the viewfinder stutters, lower the preview stream size or render at half size.
+- `ImageCapture.takePhoto()` is unverified in the Android WebView. If it is missing or fails, photos fall back to the preview frame (about 1280 wide), which is much smaller than the sensor.
+- Preview is requested at 4:3 but a phone's still may be a different shape or rotation, so the saved photo can frame slightly differently than the viewfinder. Check on a phone.
+- The viewfinder grain, dust and leak are static (one draw per shot), not animated.
+- Two WebGL contexts (viewfinder, capture) plus one per glass element. Browsers cap active contexts, and old phones may struggle. Unmeasured.
+- The thumbnail is set from a data URL of the full-size JPEG. Heavy for 12 MP photos.
 - CI has no Gradle cache and the actions are pinned to major tags only.
 - The APK is debug-signed. It is for testing, not for release.
 - `npm install` printed audit warnings. Not reviewed yet. Do not run `npm audit fix --force`.
@@ -67,6 +72,7 @@ Rewritten after every step. Read this first.
 - Camera uses the WebView's `getUserMedia` with the manifest `CAMERA` permission, no camera plugin.
 - Save/share uses the share sheet via `@capacitor/filesystem` and `@capacitor/share` (approved).
 - Single source of parameters: cameras are value ranges, `makeParams` makes concrete values, and both the shader and the CPU fallback read them.
+- The viewfinder renders through its own WebGL context at the preview size, capture through a second offscreen one at full size, both reading the same `next` look object, so what you see is what you get.
 - The picker is a row of CSS frosted chips over the viewfinder, not liquid-glass-js (see Could be better). The shutter and Share keep liquid glass.
 - Looks run on the GPU (WebGL shader pipeline) because a per-frame CPU loop is too slow for a live viewfinder on phones.
 - No shop, payments, membership, locked content, face beauty or ML.
