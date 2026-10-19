@@ -64,6 +64,7 @@
     <header><h2 id="viewTitle"></h2><button id="viewClose">Back</button></header>
     <img id="viewImg" alt="">
     <div id="viewBar">
+      <button id="viewSave">Save</button>
       <button id="viewShare">Share</button>
       <button id="viewDel">Delete</button>
     </div>
@@ -219,6 +220,20 @@
     };
     const share = () => shareBlob(latest && latest.blob);
 
+    // Save puts the JPEG into the phone's Pictures (Photos app) through the GallerySaver plugin; in a browser it downloads the file.
+    const saveBlob = async (blob, name) => {
+      if (!blob) return;
+      name = name || 'NomoneyCAM-' + Date.now() + '.jpg';
+      const cap = window.Capacitor;
+      if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) {
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000); note('Downloaded ' + name); return;
+      }
+      try { await cap.Plugins.GallerySaver.save({ data: await b64(blob), name }); note('Saved to Pictures/NomoneyCAM'); }
+      catch (e) { note('Save failed: ' + (e.message || e)); }
+    };
+    const save = () => saveBlob(latest && latest.blob, latest && latest.rec.id + '.jpg');
+
     // Gallery: grid of stored thumbnails, tap one to view, share or delete it.
     const $ = id => document.getElementById(id);
     const gal = $('gal'), grid = $('grid'), viewer = $('viewer'), viewImg = $('viewImg');
@@ -251,6 +266,7 @@
     last.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') openGallery(); };
     $('galClose').onclick = closeGallery;
     $('viewClose').onclick = closeViewer;
+    $('viewSave').onclick = () => saveBlob(current && current.blob, current && current.rec.id + '.jpg');
     $('viewShare').onclick = () => shareBlob(current && current.blob);
     $('viewDel').onclick = async () => {
       if (!current || !confirm('Delete this photo?')) return;
@@ -277,6 +293,7 @@
 
     const dock = new Container({ type: 'pill', borderRadius: 48, tintOpacity: 0.25 });
     dock.addChild(new Button({ text: '\u25CF', size: 28, type: 'circle', onClick: shoot }));
+    dock.addChild(new Button({ text: 'Save', size: 18, type: 'pill', onClick: save }));
     dock.addChild(new Button({ text: 'Share', size: 18, type: 'pill', onClick: share }));
     bar.appendChild(dock.element);
   </script>
