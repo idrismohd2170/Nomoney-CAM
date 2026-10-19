@@ -8,7 +8,16 @@
   <style>
     html, body { margin: 0; height: 100%; background: #111; color: #eee; font: 16px system-ui, sans-serif; }
     body { display: flex; flex-direction: column; }
-    video { flex: 1; min-height: 0; width: 100%; object-fit: cover; }
+    #view { position: relative; flex: 1; min-height: 0; }
+    video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    /* frosted chips over the live view: backdrop-filter works on live content, unlike the glass library's still snapshot */
+    #cams { position: absolute; left: 0; right: 0; bottom: 10px; display: flex; gap: 8px; padding: 0 12px;
+            overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
+    #cams::-webkit-scrollbar { display: none; }
+    .chip { flex: none; scroll-snap-align: center; padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.28);
+            background: rgba(255,255,255,.12); color: #fff; font: 15px system-ui, sans-serif;
+            -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+    .chip.on { background: rgba(255,255,255,.34); border-color: #fff; }
     /* glass samples a snapshot of the page, so it lives on this static bar, never over the live video */
     #bar { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px 12px 24px;
            background: linear-gradient(135deg, #1d2b4f, #4a2b5c 60%, #7a3b4e); }
@@ -18,7 +27,10 @@
   </style>
 </head>
 <body>
-  <video id="v" autoplay playsinline muted></video>
+  <div id="view">
+    <video id="v" autoplay playsinline muted></video>
+    <div id="cams" role="listbox" aria-label="Cameras"></div>
+  </div>
   <div id="msg" hidden></div>
   <div id="bar">
     <img id="last" alt="">
@@ -72,12 +84,20 @@
       }
     };
 
+    const cams = document.getElementById('cams');
+    CAMERAS.forEach((c, i) => {
+      const b = document.createElement('button');
+      b.className = 'chip' + (i === cam ? ' on' : '');
+      b.textContent = c.name;
+      b.onclick = () => {
+        cam = i;
+        cams.querySelectorAll('.chip').forEach((x, j) => x.classList.toggle('on', j === i));
+        b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+      };
+      cams.appendChild(b);
+    });
+
     const dock = new Container({ type: 'pill', borderRadius: 48, tintOpacity: 0.25 });
-    const camBtn = new Button({ text: CAMERAS[0].name, size: 18, type: 'pill', onClick: () => {
-      cam = (cam + 1) % CAMERAS.length;
-      camBtn.textElement.textContent = CAMERAS[cam].name;
-    } });
-    dock.addChild(camBtn);
     dock.addChild(new Button({ text: '\u25CF', size: 28, type: 'circle', onClick: shoot }));
     dock.addChild(new Button({ text: 'Share', size: 18, type: 'pill', onClick: share }));
     bar.appendChild(dock.element);
