@@ -19,19 +19,22 @@ Rewritten after every step. Read this first.
 - Phase 2 step 1: docs/recon.md rewritten as a new feature matrix (F1-F10, no paid rows, no shop). `reference/` added to .gitignore in case reference media is supplied later.
 - Phase 2 step 2: GPU pipeline core. `www/film-params.js` `makeParams(camera, seed)` (pure) turns a camera's ranges into concrete values plus a 256x1 per-channel tone curve and a 16^3 colour cube. `www/film-gl.js` `createRenderer()` is a one-pass WebGL shader: sharpen, tone curve, colour cube, grain, vignette. Capture now renders through it; CPU `develop()` remains the fallback when WebGL is missing. `www/cameras.js` holds placeholder cameras (Sunny, Mono, Dusk as value ranges). Each shot picks random values in the camera's ranges. Tests: `test/params.test.js`, `test/film.test.js`; CI runs every `test/*.test.js`. Checked in headless Chromium with SwiftShader: rendered a test scene with each camera and viewed it, the GPU result sits within about 4-5 levels of the CPU reference, two seeds differ, camera cycling and capture work end to end.
 - Phase 2 step 3: overlays. `makeParams` now also draws a 512x512 overlay (soft light-leak glow from a random edge, dust specks, short hairs) from the seed, and picks a frame (rounded border, short-side fractions, colour) from the camera's `frames` list. The shader screen-blends the overlay and draws the frame last. `test/overlay.test.js` checks determinism, sparse dust, leak peak on an edge and tinted by its colour, and frame choices. Viewed each effect alone and a full camera in headless Chromium.
+- Phase 2 step 4: camera library. `www/cameras.js` now has 8 own cameras (Amber, Fog, Noir, Ember, Moss, Peach, Snap, Slide), all unlocked, each a set of value ranges (tone, tint, saturation, vignette, grain, sharpening, dust, hairs, leak, frames). Every shot picks fresh values inside its camera's ranges. `test/cameras.test.js` checks: 6+ cameras, unique short names, no unknown fields (no price/lock/pro flags), ordered ranges, enough per-shot variation, and that cameras differ from one another. Viewed all 8 on one scene plus four Ember seeds: distinct looks, different leak/frame/dust per shot. App cycles through all 8 and shoots with each.
 - Bug found and fixed in step 2: a fixed 3-vector like `tint: [1,1,1]` was read as a [min,max] range and became NaN, blackening Mono. `pickVec` now handles vectors and the tests check for it.
 
 ## Next steps
-1. Camera library (6+ own cameras (replaces the placeholder trio), random values inside each camera's ranges per shot).
-2. Glass camera picker.
-3. Live viewfinder through the pipeline, full-resolution capture, front/rear toggle.
-4. Double exposure.
-5. Photo import.
-6. Gallery and save (persist, view, delete, share).
-7. Optional development wait (settings toggle, default off).
-8. docs/device-test.md and layout checks at 320/360/412 px.
+1. Glass camera picker (the cycle pill still cycles one camera at a time, and its width is sized for 5-character names).
+2. Live viewfinder through the pipeline, full-resolution capture, front/rear toggle.
+3. Double exposure.
+4. Photo import.
+5. Gallery and save (persist, view, delete, share).
+6. Optional development wait (settings toggle, default off).
+7. docs/device-test.md and layout checks at 320/360/412 px.
 
 ## Could be better
+- Camera numbers are guesses tuned only by eye on a synthetic scene (a drawn landscape). Real photos, skin tones and low light may need adjustment. Tune on a phone.
+- The cameras are our own looks, not matched to any reference. A gitignored `reference/` folder of the user's own screenshots would allow side-by-side tuning.
+- Camera names are placeholders and limited to 5 characters until the picker is built, then the rebrand.
 - No real-phone testing yet. The camera permission prompt, share sheet, glass rendering and (soon) WebGL performance are all unverified on a device.
 - No reference screenshots or recordings. Looks will be tuned by eye. A gitignored `reference/` folder of the user's own screenshots would allow side-by-side comparison.
 - Glass is a still: liquid-glass-js refracts one html2canvas snapshot of the page, not a live feed. Controls stay on the static bottom bar and never overlap the live preview.

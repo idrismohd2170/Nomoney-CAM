@@ -1,0 +1,44 @@
+// Camera library checks. Run: node test/cameras.test.js
+const assert = require('assert');
+const { makeParams } = require('../www/film-params.js');
+const { CAMERAS } = require('../www/cameras.js');
+
+const ALLOWED = new Set(['name', 'contrast', 'fade', 'sat', 'vignette', 'grain', 'grainSize', 'sharpen', 'dust', 'hairs', 'leak',
+  'leakSize', 'tint', 'shadow', 'high', 'leakColor', 'frames']);
+const NUMBERS = ['contrast', 'fade', 'sat', 'vignette', 'grain', 'grainSize', 'sharpen', 'dust', 'hairs', 'leak', 'leakSize'];
+
+// enough cameras, unique short names, and nothing that smells like a paywall
+assert(CAMERAS.length >= 6, 'at least 6 cameras');
+assert.strictEqual(new Set(CAMERAS.map(c => c.name)).size, CAMERAS.length, 'unique names');
+for (const c of CAMERAS) {
+  assert(c.name && c.name.length <= 5, `${c.name}: name fits the label`);
+  for (const k of Object.keys(c)) assert(ALLOWED.has(k), `${c.name}: unknown field ${k} (no price, lock or pro flags allowed)`);
+  for (const k of NUMBERS) if (Array.isArray(c[k])) assert(c[k][0] <= c[k][1], `${c.name}.${k} range is ordered`);
+  // vectors are a fixed [r,g,b] or two endpoint colours that a shot blends between (channels may go either way)
+  for (const k of ['tint', 'shadow', 'high', 'leakColor']) if (c[k]) {
+    const ends = Array.isArray(c[k][0]) ? c[k] : [c[k]];
+    for (const e of ends) assert(e.length === 3 && e.every(Number.isFinite), `${c.name}.${k} is a 3-vector`);
+  }
+  for (const f of c.frames || []) if (f) assert(f.width > 0 && f.width < 0.2 && f.color.length === 3, `${c.name} frame`);
+}
+
+// each shot differs within a camera: over 25 seeds most ranged fields take several different values
+const sample = c => Array.from({ length: 25 }, (_, s) => makeParams(c, s + 1));
+for (const c of CAMERAS) {
+  const ps = sample(c), varied = NUMBERS.filter(k => new Set(ps.map(p => p[k].toFixed(4))).size > 5);
+  assert(varied.length >= 4, `${c.name} varies on ${varied.length} fields only`);
+  assert(new Set(ps.map(p => p.frame.width)).size >= (c.frames && c.frames.length > 1 ? 2 : 1), `${c.name} frame choice`);
+}
+
+// cameras differ from each other: compare their average look
+const sig = c => {
+  const ps = sample(c), avg = f => ps.reduce((a, p) => a + f(p), 0) / ps.length;
+  return [avg(p => p.contrast), avg(p => p.fade), avg(p => p.sat) / 2, avg(p => p.vignette), avg(p => p.grain) * 5,
+    avg(p => p.tint[0] - p.tint[2]) * 2, avg(p => p.leak), avg(p => p.dust) / 20];
+};
+const sigs = CAMERAS.map(sig);
+for (let i = 0; i < CAMERAS.length; i++) for (let j = i + 1; j < CAMERAS.length; j++) {
+  const d = Math.hypot(...sigs[i].map((v, k) => v - sigs[j][k]));
+  assert(d > 0.12, `${CAMERAS[i].name} and ${CAMERAS[j].name} look too alike (${d.toFixed(3)})`);
+}
+console.log('cameras.test.js ok');
