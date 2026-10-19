@@ -1,14 +1,17 @@
-// Turns a camera (value ranges) plus a seed into concrete, repeatable film parameters and the two
-// lookup tables the shader reads: a 256x1 per-channel tone curve and a 16^3 colour-grade cube.
+// Turns a camera (value ranges) plus a seed into concrete, repeatable film parameters and the textures
+// the shader reads: a 256x1 per-channel tone curve, a 16^3 colour-grade cube and a 512^2 dust/light-leak overlay.
 // Pure functions, so the same numbers drive the GPU shader, the CPU fallback and the node tests.
 
 const FILM_DEFAULTS = {
   contrast: 0.3, fade: 0.04, sat: 1, vignette: 0.25, grain: 0.05, grainSize: 1.5, sharpen: 0.2,
-  tint: [1, 1, 1], shadow: [0, 0, 0], high: [0, 0, 0]
+  dust: 8, hairs: 0, leak: 0, leakSize: 0.4,
+  tint: [1, 1, 1], shadow: [0, 0, 0], high: [0, 0, 0], leakColor: [1, 0.45, 0.2],
+  frames: [null]
 };
-const FILM_NUMBERS = ['contrast', 'fade', 'sat', 'vignette', 'grain', 'grainSize', 'sharpen'];
-const FILM_VECTORS = ['tint', 'shadow', 'high'];
+const FILM_NUMBERS = ['contrast', 'fade', 'sat', 'vignette', 'grain', 'grainSize', 'sharpen', 'dust', 'hairs', 'leak', 'leakSize'];
+const FILM_VECTORS = ['tint', 'shadow', 'high', 'leakColor'];
 const LUT_N = 16;
+const OVERLAY_N = 512;
 
 function mulberry(a) {
   return () => {
@@ -57,14 +60,65 @@ function makeLut(p) {
   return out;
 }
 
+// Light added on top of the picture (screen blend): a soft leak glow from one edge, dust specks and a few hairs.
+// Row 0 is the bottom of the picture. Consumes `rand` so the whole look stays a function of the seed.
+function makeOverlay(p, rand) {
+  const n = OVERLAY_N, acc = new Float32Array(n * n * 3);
+  const add = (x, y, v, col) => { const i = (y * n + x) * 3; for (let k = 0; k < 3; k++) acc[i + k] = Math.max(acc[i + k], v * col[k]); };
+  const WHITE = [1, 1, 1];
+
+  if (p.leak > 0) {
+    const side = Math.floor(rand() * 4), t = rand();
+    const cx = side === 0 ? 0 : side === 1 ? 1 : t, cy = side === 2 ? 0 : side === 3 ? 1 : t;
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const g = Math.max(0, 1 - Math.hypot(x / n - cx, y / n - cy) / p.leakSize);
+      if (g > 0) { const i = (y * n + x) * 3, glow = g * g * p.leak; for (let k = 0; k < 3; k++) acc[i + k] = glow * p.leakColor[k]; }
+    }
+  }
+
+  const disc = (x, y, r, v) => {
+    for (let j = Math.max(0, Math.floor(y - r)); j <= Math.min(n - 1, Math.ceil(y + r)); j++)
+      for (let i = Math.max(0, Math.floor(x - r)); i <= Math.min(n - 1, Math.ceil(x + r)); i++) {
+        const a = v * (1 - Math.hypot(i - x, j - y) / r);
+        if (a > 0) add(i, j, a, WHITE);
+      }
+  };
+  for (let s = Math.round(p.dust); s > 0; s--) {
+    const x = rand() * n, y = rand() * n, r = 1 + rand() ** 3 * 3.5;
+    disc(x, y, r, 0.45 + rand() * 0.5);
+  }
+  for (let h = Math.round(p.hairs); h > 0; h--) { // a hair is a short curved stroke
+    const x0 = rand() * n, y0 = rand() * n, len = 25 + rand() * 60, a = rand() * 6.283, bend = (rand() - 0.5) * 1.5;
+    for (let t = 0; t <= 1; t += 0.02) {
+      const ang = a + bend * t;
+      disc(x0 + Math.cos(ang) * len * t, y0 + Math.sin(ang) * len * t, 1.1, 0.4);
+    }
+  }
+
+  const out = new Uint8Array(n * n * 4);
+  for (let i = 0, px = 0; px < n * n; px++, i += 4) {
+    for (let k = 0; k < 3; k++) out[i + k] = clamp255(acc[px * 3 + k] * 255);
+    out[i + 3] = 255;
+  }
+  return out;
+}
+
+// A frame is { width, round, color } as fractions of the short side, or null for none.
+function pickFrame(frames, rand) {
+  const f = frames[Math.floor(rand() * frames.length)];
+  return f ? { width: f.width, round: f.round || 0, color: f.color.slice() } : { width: 0, round: 0, color: [1, 1, 1] };
+}
+
 function makeParams(camera, seed) {
   const rand = mulberry(seed), cam = { ...FILM_DEFAULTS, ...camera }, p = {};
   for (const k of FILM_NUMBERS) p[k] = pick(cam[k], rand);
   for (const k of FILM_VECTORS) p[k] = pickVec(cam[k], rand);
+  p.frame = pickFrame(cam.frames, rand);
   p.noise = rand() * 100;
   p.curve = makeCurve(p);
   p.lut = makeLut(p);
+  p.overlay = makeOverlay(p, rand);
   return p;
 }
 
-if (typeof module !== 'undefined') module.exports = { makeParams, mulberry, pick, pickVec, LUT_N };
+if (typeof module !== 'undefined') module.exports = { makeParams, makeOverlay, mulberry, pick, pickVec, LUT_N, OVERLAY_N };

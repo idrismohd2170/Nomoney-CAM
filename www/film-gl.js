@@ -1,4 +1,5 @@
 // One-pass WebGL film renderer, shared by the viewfinder and by capture. Reads makeParams() output.
+// Order: sharpen, tone curve, colour cube, grain, vignette, dust/leak (screen), frame.
 // shortcut: no webglcontextlost handling, a lost context just stops rendering until the page reloads.
 function createRenderer(canvas = document.createElement('canvas')) {
   const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true, antialias: false, alpha: false });
@@ -12,9 +13,10 @@ precision highp float;
 precision mediump float;
 #endif
 varying vec2 v;
-uniform sampler2D u_src, u_curve, u_lut;
+uniform sampler2D u_src, u_curve, u_lut, u_over;
 uniform vec2 u_texel, u_res;
-uniform float u_sharpen, u_vig, u_grain, u_grainSize, u_noise;
+uniform float u_sharpen, u_vig, u_grain, u_grainSize, u_noise, u_frameW, u_frameR;
+uniform vec3 u_frameColor;
 
 vec3 grade(vec3 c) {
   c = clamp(c, 0., 1.);
@@ -37,6 +39,14 @@ void main() {
   c += (hash(floor(v * u_res / u_grainSize)) - .5) * u_grain * (1. - abs(l - .5) * 1.2);
   float d = distance(v, vec2(.5)) * 1.4142;
   c *= 1. - u_vig * d * d;
+  vec3 o = texture2D(u_over, v).rgb;
+  c = 1. - (1. - c) * (1. - o);                  // dust and light leak, screen blend
+  if (u_frameW > 0.) {                            // frame: rounded window, short-side fractions
+    float m = min(u_res.x, u_res.y), r = u_frameR * m;
+    vec2 q = abs(v * u_res - u_res * .5) - (u_res * .5 - vec2(u_frameW * m + r));
+    float sd = length(max(q, 0.)) + min(max(q.x, q.y), 0.) - r;
+    c = mix(c, u_frameColor, smoothstep(0., 1.5, sd));
+  }
   gl_FragColor = vec4(clamp(c, 0., 1.), 1.);
 }`;
 
@@ -62,9 +72,9 @@ void main() {
       [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, val);
     return t;
   };
-  tex(0); tex(1); tex(2);
+  tex(0); tex(1); tex(2); tex(3);
   const u = name => gl.getUniformLocation(prog, name);
-  gl.uniform1i(u('u_src'), 0); gl.uniform1i(u('u_curve'), 1); gl.uniform1i(u('u_lut'), 2);
+  gl.uniform1i(u('u_src'), 0); gl.uniform1i(u('u_curve'), 1); gl.uniform1i(u('u_lut'), 2); gl.uniform1i(u('u_over'), 3);
   const max = gl.getParameter(gl.MAX_TEXTURE_SIZE);
   let tables = null, scratch = null;
 
@@ -86,6 +96,8 @@ void main() {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, p.curve);
       gl.activeTexture(gl.TEXTURE2);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 16, 0, gl.RGBA, gl.UNSIGNED_BYTE, p.lut);
+      gl.activeTexture(gl.TEXTURE3);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 512, 512, 0, gl.RGBA, gl.UNSIGNED_BYTE, p.overlay);
       tables = p;
     }
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -99,6 +111,9 @@ void main() {
     gl.uniform1f(u('u_grain'), p.grain);
     gl.uniform1f(u('u_grainSize'), p.grainSize);
     gl.uniform1f(u('u_noise'), p.noise);
+    gl.uniform1f(u('u_frameW'), p.frame.width);
+    gl.uniform1f(u('u_frameR'), p.frame.round);
+    gl.uniform3fv(u('u_frameColor'), p.frame.color);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
   return { ok: true, canvas, render };
