@@ -11,8 +11,8 @@
     #view { position: relative; flex: 1; min-height: 0; }
     video, #vf { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     #view.front video, #view.front #vf, #view.front #ghost { transform: scaleX(-1); }
-    #flip { position: absolute; top: 10px; right: 12px; }
-    #dbl { position: absolute; top: 10px; left: 12px; }
+    #top { position: absolute; top: 10px; left: 12px; right: 12px; display: flex; gap: 8px; justify-content: space-between; }
+    #top .chip { padding: 8px 12px; font-size: 14px; }
     #ghost { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .4; pointer-events: none; }
     /* frosted chips over the live view: backdrop-filter works on live content, unlike the glass library's still snapshot */
     #cams { position: absolute; left: 0; right: 0; bottom: 10px; display: flex; gap: 8px; padding: 0 12px;
@@ -39,6 +39,11 @@
     #grid img { width: 100%; aspect-ratio: 1; object-fit: cover; background: #222; }
     #empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #999; }
     #viewImg { flex: 1; min-height: 0; width: 100%; object-fit: contain; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-top: 1px solid rgba(255,255,255,.12); }
+    .row small { display: block; margin-top: 4px; color: #999; font-size: 13px; }
+    #wait[aria-checked="true"] { background: rgba(255,255,255,.4); border-color: #fff; }
+    #last.developing { opacity: .35; animation: pulse 1s ease-in-out infinite alternate; }
+    @keyframes pulse { to { opacity: .8; } }
     #viewBar { display: flex; justify-content: center; gap: 10px; padding: 14px 12px 24px; }
     #viewBar .danger { background: rgba(220,60,60,.45); }
   </style>
@@ -47,8 +52,13 @@
   <div id="view">
     <video id="v" autoplay playsinline muted></video>
     <canvas id="vf"></canvas>
-    <button id="flip" class="chip" aria-label="Flip camera">Flip</button>
-    <button id="dbl" class="chip" aria-label="Double exposure" aria-pressed="false">Double</button>
+    <div id="top">
+      <button id="dbl" class="chip" aria-label="Double exposure" aria-pressed="false">Double</button>
+      <button id="imp" class="chip" aria-label="Import photos">Import</button>
+      <button id="flip" class="chip" aria-label="Flip camera">Flip</button>
+      <button id="cog" class="chip" aria-label="Settings">Settings</button>
+    </div>
+    <input id="file" type="file" accept="image/*" multiple hidden>
     <div id="cams" role="listbox" aria-label="Cameras"></div>
   </div>
   <div id="msg" hidden></div>
@@ -59,6 +69,13 @@
     <header><h2>Gallery</h2><button id="galClose">Close</button></header>
     <div id="empty" hidden>No photos yet</div>
     <div id="grid"></div>
+  </section>
+  <section id="set" class="sheet" hidden aria-label="Settings">
+    <header><h2>Settings</h2><button id="setClose">Close</button></header>
+    <div class="row">
+      <div><strong>Film development wait</strong><small>Photos appear a few seconds after the shot, like a lab. Off by default.</small></div>
+      <button id="wait" role="switch" aria-checked="false">Off</button>
+    </div>
   </section>
   <section id="viewer" class="sheet" hidden aria-label="Photo">
     <header><h2 id="viewTitle"></h2><button id="viewClose">Back</button></header>
@@ -148,18 +165,39 @@
     let latest = null, lastUrl = null;
     const showLast = blob => { if (lastUrl) URL.revokeObjectURL(lastUrl); last.src = lastUrl = URL.createObjectURL(blob); };
     const note = t => { msg.hidden = false; msg.textContent = t; setTimeout(() => { msg.hidden = true; }, 3000); };
-    const keep = async c => {
+    // Optional development wait: the photo is taken at once but shows up (and is stored) a few seconds later.
+    const DEV_MS = 3000;
+    let waitOn = false;
+    try { waitOn = localStorage.getItem('nomoney.wait') === '1'; } catch (e) { /* storage unavailable: stays off */ }
+    const keep = async (c, delay = 0) => {
+      const t0 = Date.now();
+      if (delay > 0) last.classList.add('developing'); // feedback from the moment of the shot, not after encoding
       const blob = await toBlob(c, 0.92);
       const tc = document.createElement('canvas'), k = 256 / Math.max(c.width, c.height);
       tc.width = Math.round(c.width * k); tc.height = Math.round(c.height * k);
       tc.getContext('2d').drawImage(c, 0, 0, tc.width, tc.height);
       const rec = { id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), t: Date.now(), cam: CAMERAS[cam].name, thumb: await toBlob(tc, 0.8) };
-      latest = { rec, blob };
-      showLast(rec.thumb);
-      try { await shotStore.add(rec, blob); } catch (e) { note('Could not store the photo: ' + (e.message || e)); }
+      const commit = async () => {
+        latest = { rec, blob };
+        showLast(rec.thumb);
+        last.classList.remove('developing');
+        try { await shotStore.add(rec, blob); } catch (e) { note('Could not store the photo: ' + (e.message || e)); }
+      };
+      if (delay > 0) setTimeout(commit, Math.max(0, delay - (Date.now() - t0))); else await commit();
     };
     // restore the newest thumbnail after a restart
     shotStore.all().then(list => { if (list[0] && !latest) { showLast(list[0].thumb); } }).catch(() => {});
+
+    // Develops a picture (video frame or canvas) with the look in `next`; used by the shutter and by import.
+    const finish = src => {
+      if (gpu.ok) { gpu.render(src, next); return gpu.canvas; }
+      const c = document.createElement('canvas'); // no WebGL: slower CPU look
+      c.width = src.videoWidth || src.width; c.height = src.videoHeight || src.height;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(src, 0, 0);
+      ctx.putImageData(develop(ctx.getImageData(0, 0, c.width, c.height), next, Date.now()), 0, 0);
+      return c;
+    };
 
     let busy = false;
     const shoot = async () => {
@@ -177,22 +215,36 @@
           src = blend(held, toCanvas(src), Math.random() < 0.5 ? 'screen' : 'lighten');
           clearHeld();
         }
-        const p = next;
-        let c;
-        if (gpu.ok) { gpu.render(src, p); c = gpu.canvas; }
-        else { // no WebGL: slower CPU look
-          c = document.createElement('canvas');
-          c.width = src.videoWidth || src.width; c.height = src.videoHeight || src.height;
-          const ctx = c.getContext('2d');
-          ctx.drawImage(src, 0, 0);
-          ctx.putImageData(develop(ctx.getImageData(0, 0, c.width, c.height), p, Date.now()), 0, 0);
-        }
-        await keep(c);
+        await keep(finish(src), waitOn ? DEV_MS : 0);
         made = true;
       } finally {
         busy = false;
         if (made) setTimeout(() => { next = newLook(); }, 0); // fresh dust, leak and frame for the next shot
       }
+    };
+
+    // Import: each chosen photo gets the selected camera's look, with a fresh random look per photo.
+    const picker = document.getElementById('file');
+    document.getElementById('imp').onclick = () => picker.click();
+    picker.onchange = async () => {
+      if (busy) return;
+      busy = true;
+      let n = 0;
+      try {
+        for (const f of picker.files) {
+          try {
+            const bmp = await createImageBitmap(f, { imageOrientation: 'from-image' });
+            const c = document.createElement('canvas'); // through a 2D canvas: WebGL ignores the flip flag for bitmaps
+            c.width = bmp.width; c.height = bmp.height;
+            c.getContext('2d').drawImage(bmp, 0, 0);
+            bmp.close();
+            await keep(finish(c));
+            next = newLook();
+            n++;
+          } catch (e) { note('Could not open ' + f.name); }
+        }
+      } finally { busy = false; picker.value = ''; }
+      if (n) note(n === 1 ? 'Photo imported' : n + ' photos imported');
     };
 
     const dblBtn = document.getElementById('dbl');
@@ -275,6 +327,17 @@
       closeViewer(); await openGallery();
       const list = await shotStore.all().catch(() => []);
       if (list[0]) showLast(list[0].thumb); else { last.removeAttribute('src'); lastUrl = null; }
+    };
+
+    // Settings sheet
+    const setEl = $('set'), waitBtn = $('wait');
+    const showWait = () => { waitBtn.setAttribute('aria-checked', waitOn); waitBtn.textContent = waitOn ? 'On' : 'Off'; };
+    showWait();
+    $('cog').onclick = () => { setEl.hidden = false; };
+    $('setClose').onclick = () => { setEl.hidden = true; };
+    waitBtn.onclick = () => {
+      waitOn = !waitOn; showWait();
+      try { localStorage.setItem('nomoney.wait', waitOn ? '1' : '0'); } catch (e) { /* not persisted */ }
     };
 
     const cams = document.getElementById('cams');
