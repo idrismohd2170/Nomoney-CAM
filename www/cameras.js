@@ -1,8 +1,11 @@
 // Our own cameras. Every field is a value range; each shot picks a random value inside it (see makeParams).
 // Number fields: n or [min, max]. Vector fields: fixed [r,g,b] or a range [[min],[max]]. frames: a list, one is picked per shot.
+// Optional `ui` (chrome variant, see theme.js) and `theme` (CSS token overrides) restyle the viewfinder, shutter bar and picker.
 // All cameras are free and unlocked. Names are placeholders until the rebrand; keep them short (the label is a small pill).
 const CAMERAS = [
-  { name: 'Amber', contrast: [0.3, 0.4], fade: [0.02, 0.05], tint: [[1.04, 1, 0.9], [1.08, 1.02, 0.95]], sat: [1.1, 1.2],
+  { name: 'Amber', ui: 'warm',
+    theme: { accent: '#e9a23b', veil: 'rgba(40,24,12,.55)', ink: '#f3e3c3', dark: '#1a1009', chip: '14px', wt: '600' },
+    contrast: [0.3, 0.4], fade: [0.02, 0.05], tint: [[1.04, 1, 0.9], [1.08, 1.02, 0.95]], sat: [1.1, 1.2],
     vignette: [0.2, 0.3], grain: [0.04, 0.06], grainSize: [1.3, 1.8], sharpen: [0.15, 0.3],
     shadow: [-0.01, 0, 0.02], high: [0.03, 0.015, -0.02],
     dust: [6, 14], hairs: [0, 1], leak: [0, 0.4], leakSize: [0.35, 0.6], leakColor: [[1, 0.55, 0.15], [1, 0.4, 0.2]],
@@ -11,7 +14,9 @@ const CAMERAS = [
     vignette: [0.2, 0.3], grain: [0.05, 0.08], grainSize: [1.6, 2.2], sharpen: [0.05, 0.15],
     shadow: [0, 0.015, 0.03], high: [0.01, 0.015, 0.02],
     dust: [3, 8], leak: [0, 0.15], leakSize: [0.5, 0.8], leakColor: [0.7, 0.8, 1] },
-  { name: 'Noir', contrast: [0.5, 0.6], fade: [0.01, 0.03], sat: 0,
+  { name: 'Noir', ui: 'mono',
+    theme: { accent: '#ffffff', veil: 'rgba(0,0,0,.62)', ink: '#ffffff', dark: '#000000', chip: '3px', wt: '400' },
+    contrast: [0.5, 0.6], fade: [0.01, 0.03], sat: 0,
     vignette: [0.3, 0.45], grain: [0.08, 0.13], grainSize: [1.4, 2.1], sharpen: [0.25, 0.4],
     dust: [10, 26], hairs: [0, 3],
     frames: [null, { width: 0.05, color: [0.97, 0.97, 0.97] }, { width: 0.05, color: [0.05, 0.05, 0.05] }] },

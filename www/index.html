@@ -28,6 +28,7 @@
     <div id="stage">
       <video id="v" autoplay playsinline muted></video>
       <canvas id="vf"></canvas>
+      <div id="chrome" aria-hidden="true"></div>
     </div>
     <div id="count" hidden aria-live="assertive"></div>
     <div id="top">
@@ -87,6 +88,7 @@
   <script src="film.js"></script>
   <script src="film-params.js"></script>
   <script src="cameras.js"></script>
+  <script src="theme.js"></script>
   <script src="film-gl.js"></script>
   <script src="modes.js"></script>
   <script src="store.js"></script>
@@ -333,6 +335,12 @@
 
     // Gallery: grid of stored thumbnails, tap one to view, share or delete it.
     const $ = id => document.getElementById(id);
+    // The camera's theme restyles the viewfinder and the bottom bar only; gallery and settings keep the neutral root tokens.
+    const applyTheme = c => {
+      const t = themeOf(c);
+      for (const el of [$('view'), $('bar')]) { el.dataset.ui = t.ui; for (const k in t.vars) el.style.setProperty(k, t.vars[k]); }
+    };
+    applyTheme(CAMERAS[cam]);
     const gal = $('gal'), grid = $('grid'), viewer = $('viewer'), viewImg = $('viewImg');
     let gridUrls = [], current = null, viewUrl = null;
     const drop = urls => { urls.forEach(u => URL.revokeObjectURL(u)); urls.length = 0; };
@@ -393,6 +401,7 @@
       b.onclick = () => {
         cam = i;
         next = newLook();
+        applyTheme(c);
         cams.querySelectorAll('.chip').forEach((x, j) => x.classList.toggle('on', j === i));
         persist();
         b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });

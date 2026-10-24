@@ -2,9 +2,10 @@
 const assert = require('assert');
 const { makeParams } = require('../www/film-params.js');
 const { CAMERAS } = require('../www/cameras.js');
+const { themeOf, THEME_DEFAULT, THEME_UIS } = require('../www/theme.js');
 
 const ALLOWED = new Set(['name', 'contrast', 'fade', 'sat', 'vignette', 'grain', 'grainSize', 'sharpen', 'dust', 'hairs', 'leak',
-  'leakSize', 'tint', 'shadow', 'high', 'leakColor', 'frames']);
+  'leakSize', 'tint', 'shadow', 'high', 'leakColor', 'frames', 'ui', 'theme']);
 const NUMBERS = ['contrast', 'fade', 'sat', 'vignette', 'grain', 'grainSize', 'sharpen', 'dust', 'hairs', 'leak', 'leakSize'];
 
 // enough cameras, unique short names, and nothing that smells like a paywall
@@ -19,8 +20,16 @@ for (const c of CAMERAS) {
     const ends = Array.isArray(c[k][0]) ? c[k] : [c[k]];
     for (const e of ends) assert(e.length === 3 && e.every(Number.isFinite), `${c.name}.${k} is a 3-vector`);
   }
+  for (const k of Object.keys(c.theme || {})) assert(k in THEME_DEFAULT, `${c.name}: unknown theme token ${k}`);
+  assert(THEME_UIS.includes(themeOf(c).ui), `${c.name}: unknown ui variant`);
   for (const f of c.frames || []) if (f) assert(f.width > 0 && f.width < 0.2 && f.color.length === 3, `${c.name} frame`);
 }
+
+// theme: defaults fill the gaps, overrides win, and a themed camera really differs from the default
+assert.deepStrictEqual(themeOf({ name: 'x' }), themeOf({ name: 'y', theme: {} }));
+assert.strictEqual(themeOf({ theme: { accent: '#123456' } }).vars['--safe'], '#123456');
+assert.strictEqual(themeOf({}).vars['--ink'], THEME_DEFAULT.ink);
+assert(CAMERAS.filter(c => c.ui && c.ui !== 'dark').length >= 2, 'two cameras prove the theme system');
 
 // each shot differs within a camera: over 25 seeds most ranged fields take several different values
 const sample = c => Array.from({ length: 25 }, (_, s) => makeParams(c, s + 1));
