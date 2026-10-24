@@ -147,8 +147,10 @@ Shared facts, used by 1-3.
 - Date stamp is a common feature on point-and-shoot cameras, but **no source loaded confirms one on single-use cameras**; the stamp is built as an optional toggle `[uncertain]`.
 
 ### 12. Kodak FunSaver (Party 800)
-- Facts: retailer listings state "ISO-800", flash, 27 exposures (https://www.bhphotovideo.com/c/product/368243-USA/Kodak_8617763_35mm_One_Time_Use_Disposable_Camera.html , https://www.adorama.com/kodak-fun-saver-35-mm-disposable-camera-flash-27-exposures/p/kkfs35l ). The Kodak page https://www.kodakprofessional.com/photographers/film/single-use-cameras **was not read** (blocked by the usage limit), so lens and flash numbers are `[uncertain]`.
-- Mapping (from the brief): flash-lit, higher grain than 11 (`grain` 0.08-0.12, ISO 800), `sat` 1.05-1.2, `vignette` 0.35-0.5, warm `tint`, orange date stamp optional.
+- Facts, from Kodak's single-use camera page https://www.kodakprofessional.com/photographers/film/single-use-cameras : "KODAK 800 speed, 27 exposure film"; a simple manual flash with a 4 to 11.5 foot (1.2 to 3.5 m) flash range; focus listed as 1 m to infinity (the page does not list aperture or shutter).
+- Review (secondary) https://www.digitalcameraworld.com/reviews/kodak-funsaver-single-use-camera-review : single-element plastic lens, 30 mm, fixed f/10, sharpness "adequate for snapshots at best", flash range 1.2-3.5 m, pre-loaded with ISO 800 colour film. The review says nothing about falloff, vignette, grain or a date stamp.
+- Retailer listings also state ISO 800, flash, 27 exposures: https://www.bhphotovideo.com/c/product/368243-USA/Kodak_8617763_35mm_One_Time_Use_Disposable_Camera.html , https://www.adorama.com/kodak-fun-saver-35-mm-disposable-camera-flash-27-exposures/p/kkfs35l
+- Mapping: ISO 800 gives more grain than 11 (`grain` 0.08-0.12); soft plastic lens (`sharpen` low); flash-lit with strong falloff beyond the stated range (`flash` 0.6-0.9, curve by eye `[uncertain]`); `vignette` 0.35-0.5 (the amount is not published `[uncertain]`); `sat` 1.05-1.2; warm `tint` (design choice `[uncertain]`). **Date stamp: neither source mentions one**, so it stays an optional per-shot extra (`stamp`, a chance) and not a claimed feature of the camera `[uncertain]`.
 
 ---
 
@@ -159,9 +161,9 @@ These facts were not obtained because of a usage limit during research. None of 
 1. ~~Kodak Gold 200 data sheet E-7022~~ closed in step 5.
 2. ~~Kodak Ultramax 400 data sheet E-7023~~ closed in step 5.
 3. ~~Kodak Ektachrome E100 current data sheet E-4000~~ closed in step 6.
-4. Kodak FunSaver specs (step 7): https://www.kodakprofessional.com/photographers/film/single-use-cameras
+4. ~~Kodak FunSaver specs~~ closed in step 7.
 5. instax SQUARE SQ1 specs and a review of print/flash look (step 4): https://www.fujifilm.com/us/en/consumer/instax/cameras/squaresq1/specifications , https://www.dpreview.com/reviews/9554630048/review-fujifilm-instax-square-sq1-simple-square-format-fun/
-6. Disposable-camera review for flash falloff, vignette and date stamp (step 7): https://www.digitalcameraworld.com/reviews/kodak-funsaver-single-use-camera-review
+6. ~~Disposable-camera review~~ read in step 7: it gives the lens and flash range only; falloff, vignette and date stamp remain unsourced.
 
 ## Licensing note
 

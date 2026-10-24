@@ -10,6 +10,9 @@ const PAPER = [0.96, 0.94, 0.9];
 const FILM = { veil: 'rgba(24,22,18,.6)', ink: '#efe9dc', dark: '#12110e', chip: '8px', wt: '500' };
 // Slide and black-and-white (inspired by reversal and classic B&W stocks, see docs/camera-research.md). `ui: 'slide'` is the cardboard-mount chrome.
 const SLIDE = { veil: 'rgba(20,20,24,.62)', ink: '#f2f2ee', dark: '#0e0e12', chip: '4px', wt: '600' };
+// Disposable family (inspired by single-use flash cameras, see docs/camera-research.md). `ui: 'flash'` is the plastic viewfinder chrome.
+// `stamp` is the chance per shot of a burned-in orange date.
+const FLASHUI = { veil: 'rgba(28,18,14,.6)', ink: '#fff3e0', dark: '#150e0a', chip: '12px', wt: '700' };
 const CAMERAS = [
   { name: 'Amber', ui: 'warm',
     theme: { accent: '#e9a23b', veil: 'rgba(40,24,12,.55)', ink: '#f3e3c3', dark: '#1a1009', chip: '14px', wt: '600' },
@@ -94,7 +97,15 @@ const CAMERAS = [
     contrast: [0.62, 0.72], fade: [0.01, 0.03], sat: 0,
     vignette: [0.4, 0.5], grain: [0.12, 0.17], grainSize: [2, 2.8], sharpen: [0.3, 0.42],
     dust: [3, 8], hairs: [0, 2],
-    frames: [null, null, { width: 0.03, color: [0.03, 0.03, 0.03] }] }
+    frames: [null, null, { width: 0.03, color: [0.03, 0.03, 0.03] }] },
+  { name: 'Flash 400', ui: 'flash', theme: { ...FLASHUI, accent: '#ff8a1f' },
+    contrast: [0.4, 0.5], fade: [0.01, 0.03], tint: [[1.01, 1, 0.97], [1.04, 1.01, 1]], sat: [1.1, 1.25],
+    vignette: [0.42, 0.55], grain: [0.05, 0.07], grainSize: [1.4, 1.9], sharpen: [0.06, 0.14], flash: [0.75, 1],
+    shadow: [0, 0, 0.01], high: [0.02, 0.01, 0], dust: [2, 6], hairs: [0, 1], leak: 0, stamp: 0.5 },
+  { name: 'Party 800', ui: 'flash', theme: { ...FLASHUI, accent: '#b388ff' },
+    contrast: [0.34, 0.44], fade: [0.03, 0.06], tint: [[1.05, 0.99, 0.92], [1.09, 1.01, 0.96]], sat: [1.05, 1.2],
+    vignette: [0.32, 0.42], grain: [0.09, 0.12], grainSize: [1.8, 2.4], sharpen: [0.02, 0.1], flash: [0.55, 0.8],
+    shadow: [0.01, 0, 0.02], high: [0.04, 0.02, -0.01], dust: [5, 10], hairs: [0, 2], leak: [0, 0.2], leakSize: [0.3, 0.5], stamp: 0.6 }
 ];
 
 if (typeof module !== 'undefined') module.exports = { CAMERAS };

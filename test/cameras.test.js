@@ -54,6 +54,12 @@ assert(slides.every(c => c.sat[0] > 1.1), 'slides are saturated');
 const grit = CAMERAS.find(c => c.name === 'Grit 400');
 assert(grit && grit.sat === 0 && grit.grain[0] + grit.grain[1] > 1.2 * (CAMERAS.find(c => c.name === 'Noir').grain[0] + CAMERAS.find(c => c.name === 'Noir').grain[1]), 'one extra black-and-white, grainier than Noir');
 
+// disposable family: flash-lit, plastic-lens vignette, and a date stamp that may be burned in
+const flashes = CAMERAS.filter(c => c.ui === 'flash');
+assert(flashes.length >= 2, 'two disposable cameras');
+assert(flashes.every(c => c.flash[0] >= 0.5 && c.vignette[0] >= 0.3 && c.stamp > 0 && c.stamp <= 1), 'flash falloff, vignette and a stamp chance');
+assert(CAMERAS.length - 8 >= 12, 'at least 12 cameras added to the original 8');
+
 // each shot differs within a camera: over 25 seeds most ranged fields take several different values
 const sample = c => Array.from({ length: 25 }, (_, s) => makeParams(c, s + 1));
 for (const c of CAMERAS) {
