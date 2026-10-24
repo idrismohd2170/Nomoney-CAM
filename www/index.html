@@ -45,6 +45,7 @@
       <button id="roll" class="chip" aria-label="Film roll"></button>
       <button id="torch" class="ib" aria-label="Torch" aria-pressed="false" hidden><svg class="ic"><use href="#i-torch"/></svg></button>
     </div>
+    <div id="fams" role="tablist" aria-label="Camera families"></div>
     <div id="cams" role="listbox" aria-label="Cameras"></div>
   </div>
   <div id="msg" hidden role="status"></div>
@@ -413,25 +414,43 @@
       try { localStorage.setItem('nomoney.wait', waitOn ? '1' : '0'); } catch (e) { /* not persisted */ }
     };
 
-    const cams = document.getElementById('cams');
-    CAMERAS.forEach((c, i) => {
+    // Picker: a row of family tabs and, under it, the chips of the active family. Choosing a tab picks that family's last camera,
+    // so the active camera is always on screen and every change is one tap.
+    const cams = document.getElementById('cams'), famEl = document.getElementById('fams');
+    const fams = camFamilies(CAMERAS), famOf = i => fams.findIndex(f => f.idx.includes(i)), lastIn = {};
+    const showCams = smooth => {
+      const fi = famOf(cam);
+      famEl.querySelectorAll('.chip').forEach((x, j) => { x.classList.toggle('on', j === fi); x.setAttribute('aria-selected', j === fi); });
+      if (cams.dataset.fam !== String(fi)) { // another family: build its chips
+        cams.dataset.fam = fi;
+        cams.replaceChildren(...fams[fi].idx.map(i => {
+          const b = document.createElement('button');
+          b.className = 'chip'; b.textContent = CAMERAS[i].name; b.setAttribute('role', 'option');
+          b.onclick = () => choose(i);
+          b.dataset.i = i;
+          return b;
+        }));
+      }
+      cams.querySelectorAll('.chip').forEach(x => { const on = +x.dataset.i === cam; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); });
+      cams.querySelector('.on').scrollIntoView({ inline: 'center', block: 'nearest', behavior: smooth ? 'smooth' : 'auto' });
+    };
+    const choose = i => {
+      const c = CAMERAS[i];
+      cam = i; lastIn[famOf(i)] = i;
+      next = newLook();
+      applyTheme(c);
+      if (c.fmt) { fmt = FORMATS.find(f => f.id === c.fmt); clearHeld(); layout(); showModes(); } // instant cameras bring their print shape
+      showCams(cams.dataset.fam === String(famOf(i)));
+      persist();
+    };
+    fams.forEach((f, j) => {
       const b = document.createElement('button');
-      b.className = 'chip' + (i === cam ? ' on' : '');
-      b.textContent = c.name;
-      b.onclick = () => {
-        cam = i;
-        next = newLook();
-        applyTheme(c);
-        if (c.fmt) { fmt = FORMATS.find(f => f.id === c.fmt); clearHeld(); layout(); showModes(); } // instant cameras bring their print shape
-        cams.querySelectorAll('.chip').forEach((x, j) => x.classList.toggle('on', j === i));
-        persist();
-        b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-      };
-      cams.appendChild(b);
+      b.className = 'chip'; b.textContent = f.name; b.setAttribute('role', 'tab');
+      b.onclick = () => choose(lastIn[j] ?? f.idx[0]);
+      famEl.appendChild(b);
     });
-
-    // shutter: the one glass control, on the static bar. The button is sized from a glyph, then the glyph is swapped for our ring icon.
-    cams.children[cam].scrollIntoView({ inline: 'center', block: 'nearest' });
+    lastIn[famOf(cam)] = cam;
+    showCams(false);
 
     // Mode chips: tap to step through the values. Active (non-default) values light up.
     const fmtBtn = $('fmt'), tmrBtn = $('tmr'), rollBtn = $('roll'), rollN = $('rollN'), torchBtn = $('torch');

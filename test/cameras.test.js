@@ -5,7 +5,7 @@ const { CAMERAS } = require('../www/cameras.js');
 const { themeOf, THEME_DEFAULT, THEME_UIS } = require('../www/theme.js');
 
 const ALLOWED = new Set(['name', 'contrast', 'fade', 'sat', 'vignette', 'grain', 'grainSize', 'sharpen', 'dust', 'hairs', 'leak',
-  'leakSize', 'tint', 'shadow', 'high', 'leakColor', 'frames', 'ui', 'theme', 'flash', 'stamp', 'fmt']);
+  'leakSize', 'tint', 'shadow', 'high', 'leakColor', 'frames', 'ui', 'theme', 'flash', 'stamp', 'fmt', 'family']);
 const NUMBERS = ['contrast', 'fade', 'sat', 'vignette', 'grain', 'grainSize', 'sharpen', 'dust', 'hairs', 'leak', 'leakSize'];
 
 // enough cameras, unique short names, and nothing that smells like a paywall
@@ -32,7 +32,7 @@ assert.strictEqual(themeOf({}).vars['--ink'], THEME_DEFAULT.ink);
 assert(CAMERAS.filter(c => c.ui && c.ui !== 'dark').length >= 2, 'two cameras prove the theme system');
 
 // instant family: three print shapes, each with a thick-bottom frame, a known format and the print chrome
-const { FORMATS } = require('../www/modes.js');
+const { FORMATS, camFamilies } = require('../www/modes.js');
 const prints = CAMERAS.filter(c => c.ui === 'print');
 assert(prints.length >= 3, 'three instant cameras');
 assert.strictEqual(new Set(prints.map(c => c.fmt)).size, prints.length, 'one print shape each');
@@ -59,6 +59,13 @@ const flashes = CAMERAS.filter(c => c.ui === 'flash');
 assert(flashes.length >= 2, 'two disposable cameras');
 assert(flashes.every(c => c.flash[0] >= 0.5 && c.vignette[0] >= 0.3 && c.stamp > 0 && c.stamp <= 1), 'flash falloff, vignette and a stamp chance');
 assert(CAMERAS.length - 8 >= 12, 'at least 12 cameras added to the original 8');
+
+// picker groups: every camera sits in exactly one family, in order, and each family stays small enough for one row
+const fams = camFamilies(CAMERAS);
+assert.deepStrictEqual(fams.flatMap(f => f.idx).sort((a, b) => a - b), CAMERAS.map((_, i) => i), 'each camera in one family');
+assert(fams.length >= 5 && fams.length <= 7, `${fams.length} families fit one tab row`);
+for (const f of fams) assert(f.name.length <= 7 && f.idx.length <= 8, `${f.name}: short label, short row`);
+assert.deepStrictEqual(camFamilies([{ name: 'a' }, { name: 'b', family: 'X' }, { name: 'c' }]), [{ name: 'Classic', idx: [0, 2] }, { name: 'X', idx: [1] }]);
 
 // each shot differs within a camera: over 25 seeds most ranged fields take several different values
 const sample = c => Array.from({ length: 25 }, (_, s) => makeParams(c, s + 1));

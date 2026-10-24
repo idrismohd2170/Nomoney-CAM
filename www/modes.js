@@ -23,4 +23,16 @@ const nextIn = (list, cur) => list[(list.indexOf(cur) + 1) % list.length];
 // one more exposure on a roll; done when the last frame is used
 const rollNext = roll => { const n = roll.n + 1; return { roll: { ...roll, n }, done: n >= roll.size }; };
 
-if (typeof module !== 'undefined') module.exports = { FORMATS, TIMERS, ROLLS, frameAspect, cropRect, stageSize, nextIn, rollNext };
+// Camera picker groups: [{ name, idx }] in order of first appearance. A camera without `family` is a Classic.
+const camFamilies = cams => {
+  const out = [];
+  cams.forEach((c, i) => {
+    const name = c.family || 'Classic';
+    let f = out.find(x => x.name === name);
+    if (!f) out.push(f = { name, idx: [] });
+    f.idx.push(i);
+  });
+  return out;
+};
+
+if (typeof module !== 'undefined') module.exports = { camFamilies, FORMATS, TIMERS, ROLLS, frameAspect, cropRect, stageSize, nextIn, rollNext };
