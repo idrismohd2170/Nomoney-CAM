@@ -74,6 +74,9 @@ video, #vf { position: absolute; inset: 0; width: 100%; height: 100%; object-fit
 [data-ui=warm] #chrome { inset: 8px; border-radius: 18px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 45%, transparent); }
 [data-ui=print] #chrome { inset: 6px; border-radius: 4px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 45%, transparent), inset 0 -44px 0 0 color-mix(in srgb, var(--ink) 14%, transparent); }
 [data-ui=print] #lastWrap { border-radius: 8px; }
+[data-ui=film] #chrome { inset: 10px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 30%, transparent); }
+[data-ui=film] #chrome::after { content: ""; position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; transform: translate(-50%, -50%); border: 1px solid color-mix(in srgb, var(--ink) 55%, transparent); border-radius: 50%; }
+[data-ui=film] #lastWrap { border-radius: 10px; }
 [data-ui=mono] .chip, [data-ui=mono] #top { text-transform: uppercase; letter-spacing: .08em; }
 [data-ui=mono] .chip { font-size: 12px; }
 [data-ui=mono] .ib { border-radius: 3px; }

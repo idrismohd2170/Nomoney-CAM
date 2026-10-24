@@ -55,15 +55,22 @@ Shared facts, used by 1-3.
 ## Colour negative 35mm
 
 ### 4. Kodak Gold 200 (Daylight 200)
-- Facts: the Kodak data sheet is E-7022 (https://imaging.kodakalaris.com/sites/prod/files/files/resources/E7022_Gold_200.pdf). **I could not open its text** (the fetch was redirected, then blocked), so no characteristic is verified from it. `[uncertain]`
-- Only verified fact: it is sold as an ISO 200 colour negative film in 135 and 120, per retailer listings https://www.adorama.com/kodak-gold-200-135-film-24-exposures/p/ekf13524g2 .
-- Look is therefore built from the brief ("warm, forgiving") and not from sourced numbers `[uncertain]`: warm `tint` ([1.05,1,0.9] to [1.09,1.02,0.95]), `sat` 1.1-1.25, `contrast` 0.28-0.4, `grain` low-mid, `fade` small.
-- **To do before step 5:** re-fetch https://business.kodakmoments.com/sites/default/files/files/resources/E7022_Gold_200.pdf and replace the `[uncertain]` flags.
+- Facts, from the Kodak tech sheet (E-7022) https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/E7022%20Gold%20tech%20sheet.pdf :
+  - ISO 200 in daylight or electronic flash, no filter; exposure latitude "two stops underexposure to three stops overexposure";
+  - described as an "outstanding combination of color saturation, fine grain, and high sharpness", "bright, colorful prints";
+  - grain given only as Print Grain Index: 44 for a 4 x 6 in print from 135 (25 is the approximate visual threshold); rms granularity not published;
+  - contrast, skin-tone rendering and colour cast are **not published** by the sheet.
+- Review (secondary) https://photofocus.com/reviews/kodak-gold-200-review-a-triumphant-return-to-medium-format/ : balance "nice and neutral", saturation "a bit more saturated than Portra, but not quite so much as Ektar", slightly grainier than Portra 160, the reviewer usually added scan contrast.
+- **The popular "warm yellow" idea is not supported by the two sources read, so it is not used** `[uncertain]`. Mapping: near-neutral with a very small warm lean (design choice for variety), `sat` 1.05-1.15, `contrast` 0.26-0.34 (gentle; no published number), `grain` 0.04-0.055 (PGI 44), `sharpen` 0.2-0.3, small `vignette`.
 
 ### 5. Kodak Ultramax 400 (Everyday 400)
-- Facts: Kodak data sheet E-7023 (http://apps.kodakmoments.com/wp-content/uploads/2017/07/E7023_max_400.pdf). **Not read** (fetch redirected, not completed). `[uncertain]`
-- Look from the brief only: ISO 400 consumer colour negative; slightly stronger saturation than 4, more grain: `sat` 1.15-1.3, `contrast` 0.35-0.45, `grain` 0.06-0.09, warm `tint`. `[uncertain]`
-- **To do before step 5:** read the data sheet above.
+- Facts, from the Kodak data sheet (E-7023) https://kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/E7023_max_400.pdf :
+  - ISO 400/27, daylight balanced, "tolerant of mixed-lighting situations";
+  - "consistently bright, vibrant colors with accurate skin-tone reproduction"; "fine grain and high sharpness";
+  - grain given only as PGI 46 (4 x 6 in print from 135), a little above Gold 200's 44;
+  - no numeric contrast or saturation.
+- Review (secondary) https://parallaxphotographic.coop/kodak-ultramax-400-film-review/ : natural, true-to-life colour, warm tones contribute to the look, "reasonable saturation and contrast", good detail in highlights and shadows.
+- Mapping: warm and natural: `tint` r-b about +0.08, `sat` 1.1-1.2, `contrast` 0.32-0.42, low `fade` (detail kept in shadows), `grain` 0.06-0.08 (PGI 46 vs 44).
 
 ### 6. Kodak Portra 400 (Portrait 400)
 - Facts, from Kodak publication E-4050 (Feb 2016) https://business.kodakmoments.com/sites/default/files/files/products/e4050_portra_400.pdf :
@@ -146,8 +153,8 @@ Shared facts, used by 1-3.
 
 These facts were not obtained because of a usage limit during research. None of them blocks step 2 (theme system). Close them before the step that builds each look.
 
-1. Kodak Gold 200 data sheet E-7022 (needed for step 5): https://business.kodakmoments.com/sites/default/files/files/resources/E7022_Gold_200.pdf
-2. Kodak Ultramax 400 data sheet E-7023 (step 5): http://apps.kodakmoments.com/wp-content/uploads/2017/07/E7023_max_400.pdf
+1. ~~Kodak Gold 200 data sheet E-7022~~ closed in step 5.
+2. ~~Kodak Ultramax 400 data sheet E-7023~~ closed in step 5.
 3. Kodak Ektachrome E100 current data sheet E-4000 (step 6): https://business.kodakmoments.com/sites/default/files/files/products/e4000_ektachrome_100.pdf
 4. Kodak FunSaver specs (step 7): https://www.kodakprofessional.com/photographers/film/single-use-cameras
 5. instax SQUARE SQ1 specs and a review of print/flash look (step 4): https://www.fujifilm.com/us/en/consumer/instax/cameras/squaresq1/specifications , https://www.dpreview.com/reviews/9554630048/review-fujifilm-instax-square-sq1-simple-square-format-fun/

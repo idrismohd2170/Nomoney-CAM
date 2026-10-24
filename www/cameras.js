@@ -6,6 +6,8 @@
 // (a FORMATS id from modes.js); the frame is the print's border with a thicker bottom strip. `ui: 'print'` is the paper-toned chrome.
 const PRINT = { veil: 'rgba(30,26,22,.58)', ink: '#f4f0e6', dark: '#16130f', chip: '10px', wt: '500' };
 const PAPER = [0.96, 0.94, 0.9];
+// Colour negative 35mm family (inspired by consumer and portrait colour negative stocks, see docs/camera-research.md). `ui: 'film'` is the shared chrome.
+const FILM = { veil: 'rgba(24,22,18,.6)', ink: '#efe9dc', dark: '#12110e', chip: '8px', wt: '500' };
 const CAMERAS = [
   { name: 'Amber', ui: 'warm',
     theme: { accent: '#e9a23b', veil: 'rgba(40,24,12,.55)', ink: '#f3e3c3', dark: '#1a1009', chip: '14px', wt: '600' },
@@ -61,7 +63,23 @@ const CAMERAS = [
     contrast: [0.3, 0.4], fade: [0.04, 0.07], tint: [[1.06, 1, 0.9], [1.1, 1.02, 0.94]], sat: [1.1, 1.22],
     vignette: [0.2, 0.28], grain: [0.05, 0.07], grainSize: [1.5, 2], sharpen: [0.1, 0.2], flash: [0.6, 0.9],
     shadow: [0, 0, 0.02], high: [0.04, 0.02, -0.02], dust: [1, 4], leak: [0.15, 0.35], leakSize: [0.3, 0.5], leakColor: [[1, 0.5, 0.2], [1, 0.7, 0.3]],
-    frames: [{ width: 0.035, bottom: 0.1, round: 0.01, color: PAPER }] }
+    frames: [{ width: 0.035, bottom: 0.1, round: 0.01, color: PAPER }] },
+  { name: 'Daylight 200', ui: 'film', theme: { ...FILM, accent: '#e6b86a' },
+    contrast: [0.26, 0.34], fade: [0.03, 0.05], tint: [[1.01, 1, 0.98], [1.03, 1.01, 1]], sat: [1.05, 1.15],
+    vignette: [0.12, 0.18], grain: [0.04, 0.055], grainSize: [1.3, 1.7], sharpen: [0.2, 0.3],
+    dust: [3, 6], leak: [0, 0.1], leakSize: [0.3, 0.5] },
+  { name: 'Everyday 400', ui: 'film', theme: { ...FILM, accent: '#d9895b' },
+    contrast: [0.32, 0.42], fade: [0.01, 0.03], tint: [[1.04, 1, 0.93], [1.07, 1.01, 0.96]], sat: [1.1, 1.2],
+    vignette: [0.3, 0.38], grain: [0.07, 0.09], grainSize: [1.5, 2], sharpen: [0.18, 0.28],
+    shadow: [0, 0, 0.01], high: [0.02, 0.01, -0.01], dust: [7, 11], hairs: [0, 1], leak: [0.05, 0.2], leakSize: [0.35, 0.55] },
+  { name: 'Portrait 400', ui: 'film', theme: { ...FILM, accent: '#e8a3a0' },
+    contrast: [0.2, 0.28], fade: [0.04, 0.07], tint: [[1.02, 1, 0.97], [1.04, 1.01, 0.99]], sat: [0.95, 1.08],
+    vignette: [0.22, 0.3], grain: [0.02, 0.035], grainSize: [1, 1.3], sharpen: [0.1, 0.2],
+    shadow: [0.01, 0, 0.01], high: [0.03, 0.01, 0], dust: [1, 3] },
+  { name: 'Verdant 400', ui: 'film', theme: { ...FILM, accent: '#7fb99a' },
+    contrast: [0.3, 0.4], fade: [0.01, 0.03], tint: [[0.95, 1, 1.04], [0.98, 1.02, 1.07]], sat: [1.05, 1.15],
+    vignette: [0.15, 0.25], grain: [0.04, 0.05], grainSize: [1.2, 1.5], sharpen: [0.22, 0.32],
+    shadow: [-0.01, 0.015, 0.01], high: [0, 0.01, 0.015], dust: [4, 9], hairs: [0, 1] }
 ];
 
 if (typeof module !== 'undefined') module.exports = { CAMERAS };

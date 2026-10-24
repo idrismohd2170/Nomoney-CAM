@@ -42,6 +42,11 @@ for (const c of prints) {
   assert(c.flash, `${c.name}: flash falloff`);
 }
 
+// colour negative family: four stocks with the shared film chrome, none framed, each with its own accent
+const negs = CAMERAS.filter(c => c.ui === 'film');
+assert(negs.length >= 4, 'four colour negative cameras');
+assert.strictEqual(new Set(negs.map(c => c.theme.accent)).size, negs.length, 'own accent each');
+
 // each shot differs within a camera: over 25 seeds most ranged fields take several different values
 const sample = c => Array.from({ length: 25 }, (_, s) => makeParams(c, s + 1));
 for (const c of CAMERAS) {
