@@ -5,7 +5,7 @@ const { CAMERAS } = require('../www/cameras.js');
 const { themeOf, THEME_DEFAULT, THEME_UIS } = require('../www/theme.js');
 
 const ALLOWED = new Set(['name', 'contrast', 'fade', 'sat', 'vignette', 'grain', 'grainSize', 'sharpen', 'dust', 'hairs', 'leak',
-  'leakSize', 'tint', 'shadow', 'high', 'leakColor', 'frames', 'ui', 'theme']);
+  'leakSize', 'tint', 'shadow', 'high', 'leakColor', 'frames', 'ui', 'theme', 'flash', 'stamp']);
 const NUMBERS = ['contrast', 'fade', 'sat', 'vignette', 'grain', 'grainSize', 'sharpen', 'dust', 'hairs', 'leak', 'leakSize'];
 
 // enough cameras, unique short names, and nothing that smells like a paywall
@@ -22,7 +22,7 @@ for (const c of CAMERAS) {
   }
   for (const k of Object.keys(c.theme || {})) assert(k in THEME_DEFAULT, `${c.name}: unknown theme token ${k}`);
   assert(THEME_UIS.includes(themeOf(c).ui), `${c.name}: unknown ui variant`);
-  for (const f of c.frames || []) if (f) assert(f.width > 0 && f.width < 0.2 && f.color.length === 3, `${c.name} frame`);
+  for (const f of c.frames || []) if (f) assert(f.width > 0 && f.width < 0.2 && (f.bottom || 0) < 0.3 && f.color.length === 3, `${c.name} frame`);
 }
 
 // theme: defaults fill the gaps, overrides win, and a themed camera really differs from the default

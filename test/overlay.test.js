@@ -29,8 +29,21 @@ assert(best > 0.4 * 255 && best <= 0.5 * 255 + 1, `leak peak ${best} follows int
 // frames: none, one, and a mix both appear across seeds
 assert.deepStrictEqual(makeParams(base, 1).frame.width, 0);
 const one = makeParams({ ...base, frames: [{ width: 0.05, round: 0.02, color: [1, 0.9, 0.8] }] }, 3).frame;
-assert.deepStrictEqual(one, { width: 0.05, round: 0.02, color: [1, 0.9, 0.8] });
+assert.deepStrictEqual(one, { width: 0.05, bottom: 0, round: 0.02, color: [1, 0.9, 0.8] });
+assert.strictEqual(makeParams({ ...base, frames: [{ width: 0.04, bottom: 0.12, color: [1, 1, 1] }] }, 3).frame.bottom, 0.12, 'thick bottom border');
 const seen = new Set();
 for (let s = 0; s < 40; s++) seen.add(makeParams({ ...base, frames: [null, { width: 0.04, color: [1, 1, 1] }] }, s).frame.width);
 assert(seen.has(0) && seen.has(0.04), 'both frame choices occur');
+
+// flash falloff: no flash changes nothing, the centre gains light and the corner loses it
+const { flashGain, stampText, stampBox } = require('../www/film-params.js');
+assert.strictEqual(flashGain(0.7, 0), 1);
+assert(flashGain(0, 0.8) > 1 && flashGain(1, 0.8) < 1 && flashGain(0.3, 0.8) > flashGain(0.9, 0.8), 'centre bright, corners dim');
+
+// date stamp: text format, place inside the picture, and the per-shot chance (0 never, 1 always)
+assert.strictEqual(stampText(new Date(2026, 9, 4)), "'26 10 04");
+const b = stampBox(4000, 3000);
+assert(b.x < 4000 && b.y < 3000 && b.x > 3000 && b.y > 2500 && b.size > 50, `stamp box ${JSON.stringify(b)}`);
+assert(!makeParams({ ...base, stamp: 0 }, 1).stamp && makeParams({ ...base, stamp: 1 }, 1).stamp, 'stamp chance');
+assert(new Set(Array.from({ length: 40 }, (_, s) => makeParams({ ...base, stamp: 0.5 }, s).stamp)).size === 2, 'half the shots stamped');
 console.log('overlay.test.js ok');

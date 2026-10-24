@@ -4,11 +4,11 @@
 
 const FILM_DEFAULTS = {
   contrast: 0.3, fade: 0.04, sat: 1, vignette: 0.25, grain: 0.05, grainSize: 1.5, sharpen: 0.2,
-  dust: 8, hairs: 0, leak: 0, leakSize: 0.4,
+  dust: 8, hairs: 0, leak: 0, leakSize: 0.4, flash: 0, stamp: 0,
   tint: [1, 1, 1], shadow: [0, 0, 0], high: [0, 0, 0], leakColor: [1, 0.45, 0.2],
   frames: [null]
 };
-const FILM_NUMBERS = ['contrast', 'fade', 'sat', 'vignette', 'grain', 'grainSize', 'sharpen', 'dust', 'hairs', 'leak', 'leakSize'];
+const FILM_NUMBERS = ['contrast', 'fade', 'sat', 'vignette', 'grain', 'grainSize', 'sharpen', 'dust', 'hairs', 'leak', 'leakSize', 'flash'];
 const FILM_VECTORS = ['tint', 'shadow', 'high', 'leakColor'];
 const LUT_N = 16;
 const OVERLAY_N = 512;
@@ -103,10 +103,21 @@ function makeOverlay(p, rand) {
   return out;
 }
 
-// A frame is { width, round, color } as fractions of the short side, or null for none.
+// A frame is { width, bottom, round, color } as fractions of the short side (`bottom` is extra border at the bottom, the
+// thick strip of an instant print), or null for none.
 function pickFrame(frames, rand) {
   const f = frames[Math.floor(rand() * frames.length)];
-  return f ? { width: f.width, round: f.round || 0, color: f.color.slice() } : { width: 0, round: 0, color: [1, 1, 1] };
+  return f ? { width: f.width, bottom: f.bottom || 0, round: f.round || 0, color: f.color.slice() } : { width: 0, bottom: 0, round: 0, color: [1, 1, 1] };
+}
+
+// Flash falloff: brightness gain at distance d from the centre (0 centre, 1 corner). The shader uses the same formula.
+const flashGain = (d, flash) => 1 + flash * (0.35 - 1.1 * d * d);
+
+// Date stamp: text like '26 10 24 and its place (right-aligned, bottom right) on a w x h picture. Drawn on a 2D canvas after development.
+const stampText = d => `'${String(d.getFullYear()).slice(2)} ${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getDate()).padStart(2, '0')}`;
+function stampBox(w, h) {
+  const size = Math.round(Math.min(w, h) * 0.04), m = Math.round(Math.min(w, h) * 0.05);
+  return { x: w - m, y: h - m, size };
 }
 
 function makeParams(camera, seed) {
@@ -118,7 +129,8 @@ function makeParams(camera, seed) {
   p.curve = makeCurve(p);
   p.lut = makeLut(p);
   p.overlay = makeOverlay(p, rand);
+  p.stamp = rand() < cam.stamp; // drawn last so the other draws keep their seeds
   return p;
 }
 
-if (typeof module !== 'undefined') module.exports = { makeParams, makeOverlay, mulberry, pick, pickVec, LUT_N, OVERLAY_N };
+if (typeof module !== 'undefined') module.exports = { flashGain, stampText, stampBox, makeParams, makeOverlay, mulberry, pick, pickVec, LUT_N, OVERLAY_N };

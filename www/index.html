@@ -215,14 +215,24 @@
     showNewest();
 
     // Develops a picture (video frame or canvas) with the look in `next`; used by the shutter and by import.
+    const burn = (src, p) => { // orange date stamp on a 2D copy (a WebGL canvas cannot take 2D drawing)
+      if (!p.stamp) return src;
+      const c = document.createElement('canvas'), x = c.getContext('2d'), b = stampBox(src.width, src.height);
+      c.width = src.width; c.height = src.height;
+      x.drawImage(src, 0, 0);
+      x.font = `700 ${b.size}px ui-monospace, monospace`; x.textAlign = 'right';
+      x.shadowColor = 'rgba(255,110,20,.85)'; x.shadowBlur = b.size * 0.4; x.fillStyle = '#ff8a1f';
+      x.fillText(stampText(new Date()), b.x, b.y);
+      return c;
+    };
     const finish = src => {
-      if (gpu.ok) { gpu.render(src, next); return gpu.canvas; }
+      if (gpu.ok) { gpu.render(src, next); return burn(gpu.canvas, next); }
       const c = document.createElement('canvas'); // no WebGL: slower CPU look
       c.width = src.videoWidth || src.width; c.height = src.videoHeight || src.height;
       const ctx = c.getContext('2d');
       ctx.drawImage(src, 0, 0);
       ctx.putImageData(develop(ctx.getImageData(0, 0, c.width, c.height), next, Date.now()), 0, 0);
-      return c;
+      return burn(c, next);
     };
 
     let busy = false;

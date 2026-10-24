@@ -1,5 +1,5 @@
 // One-pass WebGL film renderer, shared by the viewfinder and by capture. Reads makeParams() output.
-// Order: sharpen, tone curve, colour cube, grain, vignette, dust/leak (screen), frame.
+// Order: sharpen, tone curve, colour cube, grain, vignette, flash falloff, dust/leak (screen), frame.
 // shortcut: no webglcontextlost handling, a lost context just stops rendering until the page reloads.
 function createRenderer(canvas = document.createElement('canvas')) {
   const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true, antialias: false, alpha: false });
@@ -15,7 +15,7 @@ precision mediump float;
 varying vec2 v;
 uniform sampler2D u_src, u_curve, u_lut, u_over;
 uniform vec2 u_texel, u_res;
-uniform float u_sharpen, u_vig, u_grain, u_grainSize, u_noise, u_frameW, u_frameR;
+uniform float u_sharpen, u_vig, u_grain, u_grainSize, u_noise, u_frameW, u_frameR, u_frameB, u_flash;
 uniform vec3 u_frameColor;
 
 vec3 grade(vec3 c) {
@@ -39,11 +39,13 @@ void main() {
   c += (hash(floor(v * u_res / u_grainSize)) - .5) * u_grain * (1. - abs(l - .5) * 1.2);
   float d = distance(v, vec2(.5)) * 1.4142;
   c *= 1. - u_vig * d * d;
+  c *= 1. + u_flash * (.35 - 1.1 * d * d);        // flash falloff, same formula as flashGain() in film-params.js
   vec3 o = texture2D(u_over, v).rgb;
   c = 1. - (1. - c) * (1. - o);                  // dust and light leak, screen blend
   if (u_frameW > 0.) {                            // frame: rounded window, short-side fractions
-    float m = min(u_res.x, u_res.y), r = u_frameR * m;
-    vec2 q = abs(v * u_res - u_res * .5) - (u_res * .5 - vec2(u_frameW * m + r));
+    float m = min(u_res.x, u_res.y), r = u_frameR * m;   // window with equal borders, plus u_frameB extra at the bottom (y is up)
+    vec2 lo = vec2(u_frameW, u_frameW + u_frameB) * m, hi = u_res - vec2(u_frameW) * m;
+    vec2 q = abs(v * u_res - (lo + hi) * .5) - ((hi - lo) * .5 - r);
     float sd = length(max(q, 0.)) + min(max(q.x, q.y), 0.) - r;
     c = mix(c, u_frameColor, smoothstep(0., 1.5, sd));
   }
@@ -113,6 +115,8 @@ void main() {
     gl.uniform1f(u('u_noise'), p.noise);
     gl.uniform1f(u('u_frameW'), p.frame.width);
     gl.uniform1f(u('u_frameR'), p.frame.round);
+    gl.uniform1f(u('u_frameB'), p.frame.bottom);
+    gl.uniform1f(u('u_flash'), p.flash);
     gl.uniform3fv(u('u_frameColor'), p.frame.color);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
