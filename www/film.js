@@ -1,5 +1,5 @@
 // CPU film look: fallback when WebGL is unavailable, and the reference the tests check. Takes makeParams() output.
-// shortcut: no sharpening, dust, leak or frame on this path, and no colour cube (split tone), the GPU path has them.
+// shortcut: no sharpening, dust, leak, frame or flash falloff on this path, and no colour cube (split tone), the GPU path has them.
 function develop(img, p, seed = 1) {
   const { data, width, height } = img;
   const cx = width / 2, cy = height / 2, maxD2 = cx * cx + cy * cy;
