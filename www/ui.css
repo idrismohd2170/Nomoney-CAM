@@ -72,11 +72,22 @@ video, #vf { position: absolute; inset: 0; width: 100%; height: 100%; object-fit
   linear-gradient(var(--ink), var(--ink)) 0 100% / 20px 1px, linear-gradient(var(--ink), var(--ink)) 0 100% / 1px 20px,
   linear-gradient(var(--ink), var(--ink)) 100% 100% / 20px 1px, linear-gradient(var(--ink), var(--ink)) 100% 100% / 1px 20px; background-repeat: no-repeat; }
 [data-ui=warm] #chrome { inset: 8px; border-radius: 18px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 45%, transparent); }
+[data-ui=print] #chrome { inset: 6px; border-radius: 4px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 45%, transparent), inset 0 -44px 0 0 color-mix(in srgb, var(--ink) 14%, transparent); }
+[data-ui=print] #lastWrap { border-radius: 8px; }
 [data-ui=mono] .chip, [data-ui=mono] #top { text-transform: uppercase; letter-spacing: .08em; }
 [data-ui=mono] .chip { font-size: 12px; }
 [data-ui=mono] .ib { border-radius: 3px; }
 [data-ui=mono] #lastWrap { border-radius: 3px; }
 [data-ui=warm] #lastWrap { border-radius: 18px; }
+
+/* print reveal: a cosmetic instant print slides out after a shot and develops from milky to clear. Pure CSS, never delays saving. */
+#reveal { position: absolute; z-index: 2; left: 50%; top: 46%; width: 44%; max-width: 200px; padding: 8px 8px 30px; box-sizing: border-box; border-radius: 4px;
+          background: #f4f0e6; box-shadow: 0 22px 40px -12px rgba(0,0,0,.7); opacity: 0; pointer-events: none; transform: translate(-50%, -50%) rotate(-3deg); }
+#reveal canvas { display: block; width: 100%; height: auto; border-radius: 2px; }
+#reveal.go { animation: printOut 4.2s var(--ease) forwards; }
+#reveal.go canvas { animation: develop 3.2s linear forwards; }
+@keyframes printOut { 0% { opacity: 0; transform: translate(-50%, 30%) rotate(-3deg); } 12% { opacity: 1; transform: translate(-50%, -50%) rotate(-3deg); } 85% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes develop { 0% { filter: brightness(2.2) contrast(.35) saturate(0); } 100% { filter: none; } }
 
 /* toast */
 #msg { position: fixed; z-index: 30; top: calc(max(12px, env(safe-area-inset-top)) + 60px); left: 50%; transform: translateX(-50%); max-width: calc(100% - 32px);

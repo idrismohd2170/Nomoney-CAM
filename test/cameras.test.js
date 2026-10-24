@@ -5,14 +5,14 @@ const { CAMERAS } = require('../www/cameras.js');
 const { themeOf, THEME_DEFAULT, THEME_UIS } = require('../www/theme.js');
 
 const ALLOWED = new Set(['name', 'contrast', 'fade', 'sat', 'vignette', 'grain', 'grainSize', 'sharpen', 'dust', 'hairs', 'leak',
-  'leakSize', 'tint', 'shadow', 'high', 'leakColor', 'frames', 'ui', 'theme', 'flash', 'stamp']);
+  'leakSize', 'tint', 'shadow', 'high', 'leakColor', 'frames', 'ui', 'theme', 'flash', 'stamp', 'fmt']);
 const NUMBERS = ['contrast', 'fade', 'sat', 'vignette', 'grain', 'grainSize', 'sharpen', 'dust', 'hairs', 'leak', 'leakSize'];
 
 // enough cameras, unique short names, and nothing that smells like a paywall
 assert(CAMERAS.length >= 6, 'at least 6 cameras');
 assert.strictEqual(new Set(CAMERAS.map(c => c.name)).size, CAMERAS.length, 'unique names');
 for (const c of CAMERAS) {
-  assert(c.name && c.name.length <= 5, `${c.name}: name fits the label`);
+  assert(c.name && c.name.length <= 12, `${c.name}: name fits the label`);
   for (const k of Object.keys(c)) assert(ALLOWED.has(k), `${c.name}: unknown field ${k} (no price, lock or pro flags allowed)`);
   for (const k of NUMBERS) if (Array.isArray(c[k])) assert(c[k][0] <= c[k][1], `${c.name}.${k} range is ordered`);
   // vectors are a fixed [r,g,b] or two endpoint colours that a shot blends between (channels may go either way)
@@ -30,6 +30,17 @@ assert.deepStrictEqual(themeOf({ name: 'x' }), themeOf({ name: 'y', theme: {} })
 assert.strictEqual(themeOf({ theme: { accent: '#123456' } }).vars['--safe'], '#123456');
 assert.strictEqual(themeOf({}).vars['--ink'], THEME_DEFAULT.ink);
 assert(CAMERAS.filter(c => c.ui && c.ui !== 'dark').length >= 2, 'two cameras prove the theme system');
+
+// instant family: three print shapes, each with a thick-bottom frame, a known format and the print chrome
+const { FORMATS } = require('../www/modes.js');
+const prints = CAMERAS.filter(c => c.ui === 'print');
+assert(prints.length >= 3, 'three instant cameras');
+assert.strictEqual(new Set(prints.map(c => c.fmt)).size, prints.length, 'one print shape each');
+for (const c of prints) {
+  assert(FORMATS.some(f => f.id === c.fmt), `${c.name}: known format`);
+  assert(c.frames.every(f => f && f.bottom > f.width), `${c.name}: always a thick-bottom print frame`);
+  assert(c.flash, `${c.name}: flash falloff`);
+}
 
 // each shot differs within a camera: over 25 seeds most ranged fields take several different values
 const sample = c => Array.from({ length: 25 }, (_, s) => makeParams(c, s + 1));

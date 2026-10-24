@@ -2,6 +2,10 @@
 // Number fields: n or [min, max]. Vector fields: fixed [r,g,b] or a range [[min],[max]]. frames: a list, one is picked per shot.
 // Optional `ui` (chrome variant, see theme.js) and `theme` (CSS token overrides) restyle the viewfinder, shutter bar and picker.
 // All cameras are free and unlocked. Names are placeholders until the rebrand; keep them short (the label is a small pill).
+// Instant family (inspired by instant-print cameras, see docs/camera-research.md). `fmt` is the picture shape picked with the camera
+// (a FORMATS id from modes.js); the frame is the print's border with a thicker bottom strip. `ui: 'print'` is the paper-toned chrome.
+const PRINT = { veil: 'rgba(30,26,22,.58)', ink: '#f4f0e6', dark: '#16130f', chip: '10px', wt: '500' };
+const PAPER = [0.96, 0.94, 0.9];
 const CAMERAS = [
   { name: 'Amber', ui: 'warm',
     theme: { accent: '#e9a23b', veil: 'rgba(40,24,12,.55)', ink: '#f3e3c3', dark: '#1a1009', chip: '14px', wt: '600' },
@@ -42,7 +46,22 @@ const CAMERAS = [
   { name: 'Slide', contrast: [0.5, 0.62], fade: 0, tint: [[1, 0.99, 0.97], [1.03, 1, 1]], sat: [1.3, 1.45],
     vignette: [0.25, 0.35], grain: [0.02, 0.04], grainSize: [1.2, 1.5], sharpen: [0.25, 0.4],
     dust: [2, 8],
-    frames: [null, { width: 0.045, color: [0.04, 0.04, 0.04] }] }
+    frames: [null, { width: 0.045, color: [0.04, 0.04, 0.04] }] },
+  { name: 'Mini Print', ui: 'print', fmt: '43', theme: { ...PRINT, accent: '#ff8fa3' },
+    contrast: [0.2, 0.3], fade: [0.1, 0.14], tint: [[1.03, 1, 0.95], [1.06, 1.01, 0.97]], sat: [0.95, 1.08],
+    vignette: [0.3, 0.4], grain: [0.07, 0.1], grainSize: [1.9, 2.5], sharpen: [0.04, 0.12], flash: [0.5, 0.8],
+    shadow: [0.01, 0, 0.02], high: [0.02, 0.01, 0], dust: [0, 2], leak: 0,
+    frames: [{ width: 0.045, bottom: 0.17, round: 0.012, color: PAPER }] },
+  { name: 'Square Print', ui: 'print', fmt: '11', theme: { ...PRINT, accent: '#7fd6c8' },
+    contrast: [0.14, 0.24], fade: [0.06, 0.09], tint: [[0.96, 1, 1.02], [0.99, 1.01, 1.06]], sat: [0.88, 1.02],
+    vignette: [0.14, 0.22], grain: [0.045, 0.065], grainSize: [1.7, 2.2], sharpen: [0.08, 0.16], flash: [0.35, 0.55],
+    shadow: [0, 0.01, 0.03], high: [0.01, 0.01, 0.02], dust: [0, 1], leak: 0,
+    frames: [{ width: 0.05, bottom: 0.14, round: 0.01, color: [0.97, 0.97, 0.96] }] },
+  { name: 'Wide Print', ui: 'print', fmt: '32', theme: { ...PRINT, accent: '#ffc857' },
+    contrast: [0.3, 0.4], fade: [0.04, 0.07], tint: [[1.06, 1, 0.9], [1.1, 1.02, 0.94]], sat: [1.1, 1.22],
+    vignette: [0.2, 0.28], grain: [0.05, 0.07], grainSize: [1.5, 2], sharpen: [0.1, 0.2], flash: [0.6, 0.9],
+    shadow: [0, 0, 0.02], high: [0.04, 0.02, -0.02], dust: [1, 4], leak: [0.15, 0.35], leakSize: [0.3, 0.5], leakColor: [[1, 0.5, 0.2], [1, 0.7, 0.3]],
+    frames: [{ width: 0.035, bottom: 0.1, round: 0.01, color: PAPER }] }
 ];
 
 if (typeof module !== 'undefined') module.exports = { CAMERAS };

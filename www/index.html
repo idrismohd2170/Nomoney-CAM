@@ -30,6 +30,7 @@
       <canvas id="vf"></canvas>
       <div id="chrome" aria-hidden="true"></div>
     </div>
+    <div id="reveal" aria-hidden="true"><canvas></canvas></div>
     <div id="count" hidden aria-live="assertive"></div>
     <div id="top">
       <button id="dbl" class="ib" aria-label="Double exposure" aria-pressed="false"><svg class="ic"><use href="#i-double"/></svg></button>
@@ -225,6 +226,13 @@
       x.fillText(stampText(new Date()), b.x, b.y);
       return c;
     };
+    const printEl = document.getElementById('reveal'), printCv = printEl.firstElementChild;
+    const showPrint = c => { // small copy of the developed shot, animated by CSS; not part of saving
+      const k = 360 / Math.max(c.width, c.height);
+      printCv.width = Math.round(c.width * k); printCv.height = Math.round(c.height * k);
+      printCv.getContext('2d').drawImage(c, 0, 0, printCv.width, printCv.height);
+      printEl.classList.remove('go'); void printEl.offsetWidth; printEl.classList.add('go');
+    };
     const finish = src => {
       if (gpu.ok) { gpu.render(src, next); return burn(gpu.canvas, next); }
       const c = document.createElement('canvas'); // no WebGL: slower CPU look
@@ -257,7 +265,9 @@
           } else src = blend(held, one, Math.random() < 0.5 ? 'screen' : 'lighten');
           clearHeld();
         }
-        await keep(finish(src), waitOn ? DEV_MS : 0);
+        const done = finish(src);
+        if (CAMERAS[cam].ui === 'print') showPrint(done);
+        await keep(done, waitOn ? DEV_MS : 0);
         made = true;
       } finally {
         busy = false;
@@ -412,6 +422,7 @@
         cam = i;
         next = newLook();
         applyTheme(c);
+        if (c.fmt) { fmt = FORMATS.find(f => f.id === c.fmt); clearHeld(); layout(); showModes(); } // instant cameras bring their print shape
         cams.querySelectorAll('.chip').forEach((x, j) => x.classList.toggle('on', j === i));
         persist();
         b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
