@@ -47,6 +47,13 @@ const negs = CAMERAS.filter(c => c.ui === 'film');
 assert(negs.length >= 4, 'four colour negative cameras');
 assert.strictEqual(new Set(negs.map(c => c.theme.accent)).size, negs.length, 'own accent each');
 
+// slide family: two reversal stocks (saturated) and a pushed black-and-white that is not the old Noir
+const slides = CAMERAS.filter(c => c.ui === 'slide');
+assert(slides.length >= 2, 'two slide cameras');
+assert(slides.every(c => c.sat[0] > 1.1), 'slides are saturated');
+const grit = CAMERAS.find(c => c.name === 'Grit 400');
+assert(grit && grit.sat === 0 && grit.grain[0] + grit.grain[1] > 1.2 * (CAMERAS.find(c => c.name === 'Noir').grain[0] + CAMERAS.find(c => c.name === 'Noir').grain[1]), 'one extra black-and-white, grainier than Noir');
+
 // each shot differs within a camera: over 25 seeds most ranged fields take several different values
 const sample = c => Array.from({ length: 25 }, (_, s) => makeParams(c, s + 1));
 for (const c of CAMERAS) {

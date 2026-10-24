@@ -8,6 +8,8 @@ const PRINT = { veil: 'rgba(30,26,22,.58)', ink: '#f4f0e6', dark: '#16130f', chi
 const PAPER = [0.96, 0.94, 0.9];
 // Colour negative 35mm family (inspired by consumer and portrait colour negative stocks, see docs/camera-research.md). `ui: 'film'` is the shared chrome.
 const FILM = { veil: 'rgba(24,22,18,.6)', ink: '#efe9dc', dark: '#12110e', chip: '8px', wt: '500' };
+// Slide and black-and-white (inspired by reversal and classic B&W stocks, see docs/camera-research.md). `ui: 'slide'` is the cardboard-mount chrome.
+const SLIDE = { veil: 'rgba(20,20,24,.62)', ink: '#f2f2ee', dark: '#0e0e12', chip: '4px', wt: '600' };
 const CAMERAS = [
   { name: 'Amber', ui: 'warm',
     theme: { accent: '#e9a23b', veil: 'rgba(40,24,12,.55)', ink: '#f3e3c3', dark: '#1a1009', chip: '14px', wt: '600' },
@@ -79,7 +81,20 @@ const CAMERAS = [
   { name: 'Verdant 400', ui: 'film', theme: { ...FILM, accent: '#7fb99a' },
     contrast: [0.3, 0.4], fade: [0.01, 0.03], tint: [[0.95, 1, 1.04], [0.98, 1.02, 1.07]], sat: [1.05, 1.15],
     vignette: [0.15, 0.25], grain: [0.04, 0.05], grainSize: [1.2, 1.5], sharpen: [0.22, 0.32],
-    shadow: [-0.01, 0.015, 0.01], high: [0, 0.01, 0.015], dust: [4, 9], hairs: [0, 1] }
+    shadow: [-0.01, 0.015, 0.01], high: [0, 0.01, 0.015], dust: [4, 9], hairs: [0, 1] },
+  { name: 'Vivid 50', ui: 'slide', theme: { ...SLIDE, accent: '#3fd0c9' },
+    contrast: [0.58, 0.7], fade: 0, tint: [[0.99, 0.99, 1], [1.01, 1, 1.03]], sat: [1.45, 1.6],
+    vignette: [0.2, 0.3], grain: [0.01, 0.025], grainSize: [1.1, 1.4], sharpen: [0.3, 0.42],
+    shadow: [-0.01, 0, 0.01], high: [0.03, 0.02, 0.01], dust: [1, 3] },
+  { name: 'Clear 100', ui: 'slide', theme: { ...SLIDE, accent: '#8fb8ff' },
+    contrast: [0.34, 0.44], fade: 0, tint: [[0.99, 1, 1.01], [1.01, 1, 1.02]], sat: [1.12, 1.25],
+    vignette: [0.1, 0.18], grain: [0.015, 0.025], grainSize: [1.1, 1.4], sharpen: [0.22, 0.34],
+    high: [0.02, 0.02, 0.025], dust: [4, 9], hairs: [0, 1] },
+  { name: 'Grit 400', ui: 'mono', theme: { accent: '#d8d8d8', veil: 'rgba(8,8,8,.7)', ink: '#f0f0f0', dark: '#050505', chip: '0px', wt: '600' },
+    contrast: [0.62, 0.72], fade: [0.01, 0.03], sat: 0,
+    vignette: [0.4, 0.5], grain: [0.12, 0.17], grainSize: [2, 2.8], sharpen: [0.3, 0.42],
+    dust: [3, 8], hairs: [0, 2],
+    frames: [null, null, { width: 0.03, color: [0.03, 0.03, 0.03] }] }
 ];
 
 if (typeof module !== 'undefined') module.exports = { CAMERAS };

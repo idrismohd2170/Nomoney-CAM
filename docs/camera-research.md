@@ -109,13 +109,15 @@ Shared facts, used by 1-3.
 - Mapping: `sat` 1.4-1.6, `contrast` 0.55-0.7, `fade` 0, `grain` 0.015-0.03, `sharpen` 0.3-0.45; highlights clip (`high` positive); `vignette` 0.2-0.3.
 
 ### 9. Kodak Ektachrome E100 (Clear 100)
-- Facts: the sheet I could read is for the **older E100G** (Kodak E-4024, Sept 2009) https://www.tate.org.uk/documents/600/page_8_2_data_sheet_ektachrome_e100g_e100gx_0.pdf :
-  - neutral colour balance for E100G (E100GX is warm), "moderately enhanced" saturation;
-  - lower-contrast scale with extended tonal range, lower D-min (brighter whites);
-  - diffuse rms granularity 8 ("extremely fine");
-  - daylight balanced, exposure index 100.
-- The current film's own sheet (E-4000, Aug 2018) exists at https://business.kodakmoments.com/sites/default/files/files/products/e4000_ektachrome_100.pdf but **was not read**, so the current film's numbers are `[uncertain]`.
-- Mapping: the clean, neutral counterpart to 8: `sat` 1.15-1.3, `contrast` 0.38-0.5, `tint` neutral ([0.99,1,1.01] to [1.01,1,1.02]), `fade` 0, `grain` 0.015-0.03.
+- Facts, from Kodak publication E-4000 (revised Aug 2018) https://business.kodakmoments.com/sites/default/files/files/products/e4000_ektachrome_100.pdf (also quoted at https://www.jaskamerakauppa.fi/en/shop/7782-kodak-ektachrome-e100-36135-041771884574.html ):
+  - exposure index EI 100 for daylight or electronic flash, no filter;
+  - "neutral color balance", "moderately enhanced color saturation", "a low contrast tone scale";
+  - "extremely fine grain (rms 8)";
+  - whiter, brighter whites (low D-min), extended tonal range, "pleasing, natural skin tone reproduction";
+  - sharpness not published as a number.
+- Earlier E100G sheet (older film, kept for comparison): https://www.tate.org.uk/documents/600/page_8_2_data_sheet_ektachrome_e100g_e100gx_0.pdf
+- **Conflict with the brief:** the brief wants slide looks "saturated, high contrast"; the current sheet says low-contrast tone scale. Clear 100 is therefore built as the clean, neutral, brighter-whites counterpart to 8, with only moderate contrast (above a negative, below Vivid 50). Contrast numbers remain our choice, since no value is published.
+- Mapping: `sat` 1.12-1.25, `contrast` 0.34-0.44, `tint` neutral, `fade` 0, `high` slightly positive (bright whites), `grain` 0.015-0.025 (rms 8, extremely fine).
 
 ---
 
@@ -129,6 +131,7 @@ Shared facts, used by 1-3.
   - underexposure with longer development raises contrast and graininess and loses shadow detail.
 - Review (secondary): a strong, punchy contrast straight from the tank; grain visible when zoomed on 35mm. https://www.analog.cafe/r/kodak-tri-x-400-film-review-5pbm
 - Mapping: `sat` 0; `contrast` 0.5-0.62; `grain` 0.09-0.13 with `grainSize` 1.5-2.2; `fade` 0.01-0.03; `sharpen` 0.25-0.4; `vignette` 0.3-0.4.
+- **Built differently in step 6:** those numbers match our existing Noir, so Grit 400 follows the sheet's statement that underexposure with longer development raises contrast and graininess, i.e. a pushed look: `contrast` 0.62-0.72, `grain` 0.12-0.17, `grainSize` 2-2.8, `vignette` 0.4-0.5, dust. The amounts are our choice (the sheet gives no numbers).
 
 ---
 
@@ -155,7 +158,7 @@ These facts were not obtained because of a usage limit during research. None of 
 
 1. ~~Kodak Gold 200 data sheet E-7022~~ closed in step 5.
 2. ~~Kodak Ultramax 400 data sheet E-7023~~ closed in step 5.
-3. Kodak Ektachrome E100 current data sheet E-4000 (step 6): https://business.kodakmoments.com/sites/default/files/files/products/e4000_ektachrome_100.pdf
+3. ~~Kodak Ektachrome E100 current data sheet E-4000~~ closed in step 6.
 4. Kodak FunSaver specs (step 7): https://www.kodakprofessional.com/photographers/film/single-use-cameras
 5. instax SQUARE SQ1 specs and a review of print/flash look (step 4): https://www.fujifilm.com/us/en/consumer/instax/cameras/squaresq1/specifications , https://www.dpreview.com/reviews/9554630048/review-fujifilm-instax-square-sq1-simple-square-format-fun/
 6. Disposable-camera review for flash falloff, vignette and date stamp (step 7): https://www.digitalcameraworld.com/reviews/kodak-funsaver-single-use-camera-review
