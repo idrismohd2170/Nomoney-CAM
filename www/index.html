@@ -114,10 +114,14 @@
 
     let torchOn = false;
     // Moderate-size preview stream keeps the shader fast; the photo itself is taken at full size in still().
+    let startId = 0;
     const startCamera = async () => {
+      const id = ++startId;
       if (stream) stream.getTracks().forEach(t => t.stop());
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, aspectRatio: { ideal: 4 / 3 } }, audio: false });
+        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, aspectRatio: { ideal: 4 / 3 } }, audio: false });
+        if (id !== startId) { s.getTracks().forEach(t => t.stop()); return; } // a newer start (quick Flip taps) won; do not leave this stream running
+        stream = s;
         v.srcObject = stream;
         viewEl.classList.toggle('front', facing === 'user');
         const track = stream.getVideoTracks()[0], caps = track.getCapabilities ? track.getCapabilities() : {};
@@ -190,14 +194,14 @@
     const DEV_MS = 3000;
     let waitOn = false;
     try { waitOn = localStorage.getItem('nomoney.wait') === '1'; } catch (e) { /* storage unavailable: stays off */ }
-    const keep = async (c, delay = 0) => {
+    const keep = async (c, delay = 0, imported = false) => { // imported photos never join the open roll
       const t0 = Date.now();
       if (delay > 0) last.classList.add('developing'); // feedback from the moment of the shot, not after encoding
       const blob = await toBlob(c, 0.92);
       const tc = document.createElement('canvas'), k = 256 / Math.max(c.width, c.height);
       tc.width = Math.round(c.width * k); tc.height = Math.round(c.height * k);
       tc.getContext('2d').drawImage(c, 0, 0, tc.width, tc.height);
-      const rec = { id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), t: Date.now(), cam: CAMERAS[cam].name, roll: roll ? roll.id : undefined, thumb: await toBlob(tc, 0.8) };
+      const rec = { id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), t: Date.now(), cam: CAMERAS[cam].name, roll: roll && !imported ? roll.id : undefined, thumb: await toBlob(tc, 0.8) };
       const commit = async () => {
         latest = { rec, blob };
         last.classList.remove('developing');
@@ -305,7 +309,8 @@
             c.width = bmp.width; c.height = bmp.height;
             c.getContext('2d').drawImage(bmp, 0, 0);
             bmp.close();
-            await keep(finish(c));
+            next.stamp = false; // no burned-in date: it would be today's, not the photo's
+            await keep(finish(c), 0, true);
             next = newLook();
             n++;
           } catch (e) { note('Could not open ' + f.name); }

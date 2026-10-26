@@ -33,7 +33,7 @@ Nothing in this app has run on a real phone yet. Install the debug APK from the 
 
 ## 6. Import
 1. Tap the import icon (picture with a plus). **Expect:** the phone's file or photo picker.
-2. Choose two photos. **Expect:** "2 photos imported", and both appear in the gallery with the selected camera's look, the right way up.
+2. Choose two photos. **Expect:** "2 photos imported", and both appear in the gallery with the selected camera's look, the right way up. Imported photos carry no orange date even with a date-stamp camera, and with a Roll open they appear at once and do not use up roll frames.
 
 ## 7. Settings: film development wait
 1. Tap the settings icon (sliders). **Expect:** a Settings sheet with one switch, Off.

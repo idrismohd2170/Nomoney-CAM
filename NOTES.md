@@ -35,6 +35,7 @@ Rewritten after every step. Read this first.
   8. Picker grouped by family (a first draft was in the working tree uncommitted; reviewed, kept, verified).
   9. Device checklist, contact sheet of all new themes at 360 px (`docs/design/themes-360.png`), these notes.
 - Verified in headless Chromium (SwiftShader software GPU, fake camera): all 20 cameras selectable at 320, 360 and 412 px, no overflow or overlap, each new theme screenshotted at 360 px and viewed, rendered samples of every family viewed, print animation runs and ends, a stored full photo carries the orange stamp bottom-right, the choice survives a reload. Node tests: params, film, overlay (frames, flash, stamp), cameras (fields, themes, families, distinctness), modes, store.
+- Audit fixes (browser-verified): imports no longer join an open roll or get a date stamp; quick Flip taps no longer leave extra camera streams running. Audit items left open on purpose: the Back button probably closes the app from the gallery (check on a phone, then handle with history entries, no dependency), no automated browser test (needs a dev dependency: ask first), two leftover Android template tests and `allowBackup` (android/ and file deletion: ask first), shared photos stay in the cache.
 - Bugs found by running the page and fixed: `pickVec` read a fixed 3-vector as a range; `#empty{display:flex}` beat `hidden`; `getCapabilities` called detached from its track; `$` used before its `const` (emptied the picker).
 
 ## Next steps
@@ -47,7 +48,7 @@ Rewritten after every step. Read this first.
 - Nothing has run on a real phone: camera permission, share sheet, glass rendering, WebGL speed, the picker, themes, print animation, stamp. Frame times were only measured on SwiftShader (about 67 ms per viewfinder frame at 640x480, 154 ms at 1280x960, 1.8 s for a 4000x3000 capture).
 - Looks: all numbers are by eye on synthetic scenes. The instant looks have no published look data (flash falloff, lifted blacks come from the brief); the warm lean of Daylight 200, plastic-lens vignette amounts and the green lean of Verdant 400 are design choices, flagged in the research doc.
 - Frames crop into the picture instead of extending the canvas, so a print frame hides some of the shot. The overlay is 512x512 stretched over the picture, so dust gets larger on full-size captures.
-- The date stamp is not shown in the viewfinder, uses today's date also for imported photos, and is a fixed size and place (bottom right). It sits in the thumbnail too.
+- The date stamp is not shown in the viewfinder and is a fixed size and place (bottom right). It sits in the thumbnail too. Imports never get one.
 - Selecting an instant camera overrides the chosen picture shape (the user can change it afterwards; a saved shape is not overridden at startup).
 - The glass shutter refracts one snapshot taken at load, so a theme change recolours its dot and ring but not the glass. The snapshot is never retaken.
 - Themes need `color-mix()` (Android System WebView from about 2023); older ones show default accents. Variants are shared by family, not one chrome per camera, on purpose (cost).
